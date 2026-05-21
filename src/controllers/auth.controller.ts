@@ -94,3 +94,19 @@ export const resetPassword = async (req: Request, res: Response) => {
     res.status(400).json({ message: error.message });
   }
 };
+
+export const changePassword = async (req: Request, res: Response) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+    const userId = req.session.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const result = await authService.changePassword(userId, oldPassword, newPassword);
+    res.json(result);
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+};
