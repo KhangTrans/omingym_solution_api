@@ -116,7 +116,7 @@ export const loginUser = async (identifier: string, password: string) => {
   
   const user = await userRepository.findOne({
     where: identifier.includes('@') ? { email: identifier } : { phone_number: identifier },
-    relations: ['role']
+    relations: { role: true }
   });
 
   if (!user) {
