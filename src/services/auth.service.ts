@@ -25,6 +25,16 @@ const transporter = nodemailer.createTransport({
 });
 
 export const sendOTP = async (identifier: string) => {
+  // Check if user already exists
+  const userRepository = AppDataSource.getRepository(User);
+  const existingUser = await userRepository.findOne({
+    where: identifier.includes('@') ? { email: identifier } : { phone_number: identifier }
+  });
+
+  if (existingUser) {
+    throw new Error(identifier.includes('@') ? 'Email đã được đăng ký.' : 'Số điện thoại đã được đăng ký.');
+  }
+
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   const expiresAt = Date.now() + 2 * 60 * 1000; // 2 minutes from now
 
@@ -93,6 +103,23 @@ export const verifyOTP = async (identifier: string, otp: string) => {
 
 export const registerUser = async (userData: any) => {
   const userRepository = AppDataSource.getRepository(User);
+
+  // Check existing user again to be safe
+  const existingUser = await userRepository.findOne({
+    where: [
+      userData.email ? { email: userData.email } : null,
+      userData.phone_number ? { phone_number: userData.phone_number } : null
+    ].filter((condition): condition is { email: string } | { phone_number: string } => condition !== null)
+  });
+
+  if (existingUser) {
+    if (userData.email && existingUser.email === userData.email) {
+      throw new Error('Email đã được sử dụng.');
+    }
+    if (userData.phone_number && existingUser.phone_number === userData.phone_number) {
+      throw new Error('Số điện thoại đã được sử dụng.');
+    }
+  }
 
   // Hash password
   const hashedPassword = await bcrypt.hash(userData.password, 10);

@@ -13,7 +13,7 @@ const app: Application = express();
 
 // Middlewares
 app.use(cors({
-  origin: true,
+  origin: 'http://localhost:5173',
   credentials: true // Allow cookies/sessions
 }));
 app.use(express.json());
@@ -53,11 +53,6 @@ AppDataSource.initialize()
   .catch((err) => {
     console.error('Error during Data Source initialization', err);
   });
-
-// Middlewares
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use('/api/users', userRoutes);

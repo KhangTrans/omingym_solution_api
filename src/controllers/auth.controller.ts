@@ -8,7 +8,8 @@ export const requestOTP = async (req: Request, res: Response) => {
     const result = await authService.sendOTP(identifier);
     res.json(result);
   } catch (error: any) {
-    res.status(500).json({ message: error.message });
+    const statusCode = error.message.includes('đã được đăng ký') ? 400 : 500;
+    res.status(statusCode).json({ message: error.message });
   }
 };
 
@@ -34,7 +35,8 @@ export const completeRegistration = async (req: Request, res: Response) => {
 
     res.status(201).json({ message: 'User registered successfully', userId: user.id });
   } catch (error: any) {
-    res.status(500).json({ message: error.message });
+    const statusCode = error.message.includes('đã được sử dụng') ? 400 : 500;
+    res.status(statusCode).json({ message: error.message });
   }
 };
 
