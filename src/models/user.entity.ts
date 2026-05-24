@@ -22,8 +22,23 @@ export class User {
   @Column({ type: 'varchar', length: 255 })
   password!: string;
 
-  @Column({ type: 'varchar', length: 100 })
+  @Column({ type: 'varchar', length: 100, nullable: true })
   full_name!: string;
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  avatar_url?: string;
+
+  @Column({ type: 'date', nullable: true })
+  dob?: Date;
+
+  @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true })
+  height?: number;
+
+  @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true })
+  weight?: number;
+
+  @Column({ type: 'text', nullable: true })
+  medical_history?: string;
 
   @Column({ type: 'int', nullable: true })
   age?: number;
