@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import * as authService from '../services/auth.service.js';
 import { decryptRSA } from '../utils/crypto.js';
+import { AppDataSource } from '../config/data-source.js';
+import { User } from '../models/user.entity.js';
 
 export const requestOTP = async (req: Request, res: Response) => {
   try {
@@ -50,6 +52,8 @@ export const login = async (req: Request, res: Response) => {
       id: user.id,
       email: user.email,
       phone_number: user.phone_number,
+      full_name: user.full_name,
+      avatar_url: user.avatar_url,
       role: user.role.role_name
     };
 
@@ -69,11 +73,28 @@ export const logout = (req: Request, res: Response) => {
   });
 };
 
-export const getProfile = (req: Request, res: Response) => {
-  if (req.session.user) {
-    res.json(req.session.user);
-  } else {
-    res.status(401).json({ message: 'Not authenticated' });
+export const getProfile = async (req: Request, res: Response) => {
+  try {
+    const userId = req.session.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+
+    const userRepository = AppDataSource.getRepository(User);
+    const user = await userRepository.findOne({
+      where: { id: userId },
+      relations: { role: true }
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Don't send password
+    const { password, ...userWithoutPassword } = user;
+    res.json(userWithoutPassword);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
   }
 };
 
