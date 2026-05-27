@@ -3,7 +3,7 @@ import * as authService from '../services/auth.service.js';
 import { decryptRSA } from '../utils/crypto.js';
 import { AppDataSource } from '../config/data-source.js';
 import { User } from '../models/user.entity.js';
-import { RequestOTPDto, CompleteRegistrationDto, LoginDto } from '../dtos/auth.dto.js';
+import { RequestOTPDto, CompleteRegistrationDto, LoginDto, GoogleLoginDto } from '../dtos/auth.dto.js';
 
 export const requestOTP = async (req: Request, res: Response) => {
   try {
@@ -34,7 +34,9 @@ export const completeRegistration = async (req: Request, res: Response) => {
       phone_number: !identifier.includes('@') ? identifier : undefined,
       password: password,
       role_id: 3, // Default role: Customer
-      ...personalInfo
+      full_name: personalInfo?.full_name || '',
+      ...personalInfo,
+      dob: personalInfo?.dob ? new Date(personalInfo.dob) : undefined
     });
 
     res.status(201).json({ message: 'User registered successfully', userId: user.id });
@@ -60,6 +62,28 @@ export const login = async (req: Request, res: Response) => {
     };
 
     res.json({ message: 'Login successful', user: req.session.user });
+  } catch (error: any) {
+    res.status(401).json({ message: error.message });
+  }
+};
+
+export const googleLogin = async (req: Request, res: Response) => {
+  try {
+    const { idToken }: GoogleLoginDto = req.body;
+    const googlePayload = await authService.verifyGoogleToken(idToken);
+    const user = await authService.loginWithGoogle(googlePayload);
+
+    // Save to session
+    req.session.user = {
+      id: user.id,
+      email: user.email,
+      phone_number: user.phone_number,
+      full_name: user.full_name,
+      avatar_url: user.avatar_url,
+      role: user.role.role_name
+    };
+
+    res.json({ message: 'Google login successful', user: req.session.user });
   } catch (error: any) {
     res.status(401).json({ message: error.message });
   }

@@ -4,8 +4,11 @@ import bcrypt from 'bcrypt';
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 import { RegisterUserDto } from '../dtos/auth.dto.js';
+import { OAuth2Client } from 'google-auth-library';
 
 dotenv.config();
+
+const googleClient = new OAuth2Client();
 
 // OTP Structure with expiration
 interface OTPData {
@@ -229,6 +232,52 @@ export const loginUser = async (identifier: string, password: string) => {
   const isPasswordValid = await bcrypt.compare(password, user.password);
   if (!isPasswordValid) {
     throw new Error('Invalid password');
+  }
+
+  return user;
+};
+
+export const verifyGoogleToken = async (idToken: string) => {
+  const ticket = await googleClient.verifyIdToken({
+    idToken,
+    audience: [
+      process.env.GOOGLE_CLIENT_ID_WEB!,
+      process.env.GOOGLE_CLIENT_ID_MOBILE!
+    ],
+  });
+  const payload = ticket.getPayload();
+  if (!payload) {
+    throw new Error('Invalid Google token');
+  }
+  return payload;
+};
+
+export const loginWithGoogle = async (googlePayload: any) => {
+  const userRepository = AppDataSource.getRepository(User);
+  const { email, name, picture, sub: googleId } = googlePayload;
+
+  let user = await userRepository.findOne({
+    where: { email },
+    relations: { role: true }
+  });
+
+  if (!user) {
+    // Auto-register if user doesn't exist
+    user = userRepository.create({
+      email,
+      full_name: name,
+      avatar_url: picture,
+      password: await bcrypt.hash(googleId, 10), // Dummy password for social login
+      role_id: 3, // Default role: Customer
+      status: 'active'
+    });
+    await userRepository.save(user);
+    
+    // Re-fetch to get role info
+    user = await userRepository.findOne({
+      where: { id: user.id },
+      relations: { role: true }
+    }) as User;
   }
 
   return user;

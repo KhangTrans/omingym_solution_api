@@ -27,6 +27,10 @@ export interface LoginDto {
   password: string;
 }
 
+export interface GoogleLoginDto {
+  idToken: string;
+}
+
 export interface RegisterUserDto {
   email?: string;
   phone_number?: string;
