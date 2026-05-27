@@ -1,10 +1,21 @@
 import { AppDataSource } from '../config/data-source.js';
 import { User } from '../models/user.entity.js';
 import { UpdateProfileDto, CreateUserDto } from '../dtos/user.dto.js';
+import { getCache, setCache, deleteCache } from '../utils/cache.js';
 
 export const fetchUsers = async () => {
+  const cacheKey = 'users:all';
+  const cachedUsers = await getCache<User[]>(cacheKey);
+  
+  if (cachedUsers) {
+    return cachedUsers;
+  }
+
   const userRepository = AppDataSource.getRepository(User);
-  return await userRepository.find();
+  const users = await userRepository.find();
+  
+  await setCache(cacheKey, users, 300); // Cache for 5 minutes
+  return users;
 };
 
 export const updateUserProfile = async (userId: number, updateData: UpdateProfileDto) => {
@@ -24,7 +35,12 @@ export const updateUserProfile = async (userId: number, updateData: UpdateProfil
   if (updateData.workout_goal) user.workout_goal = updateData.workout_goal;
   if (updateData.medical_history) user.medical_history = updateData.medical_history;
 
-  return await userRepository.save(user);
+  const updatedUser = await userRepository.save(user);
+  
+  // Invalidate cache
+  await deleteCache('users:all');
+  
+  return updatedUser;
 };
 
 export const createNewUser = (userData: CreateUserDto) => {
