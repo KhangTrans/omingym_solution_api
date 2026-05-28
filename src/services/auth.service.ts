@@ -1,5 +1,9 @@
 import { AppDataSource } from '../config/data-source.js';
 import { User } from '../models/user.entity.js';
+import { Customer } from '../models/customer.entity.js';
+import { Partner } from '../models/partner.entity.js';
+import { Trainer } from '../models/trainer.entity.js';
+import { Staff } from '../models/staff.entity.js';
 import bcrypt from 'bcrypt';
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
@@ -128,18 +132,43 @@ export const registerUser = async (userData: RegisterUserDto) => {
   // Hash password
   const hashedPassword = await bcrypt.hash(userData.password, 10);
 
-  // Encrypt sensitive info if needed with AES
-  // Example: phone_number = encryptAES(userData.phone_number);
-
   const newUser = userRepository.create({
-    ...userData,
+    email: userData.email,
+    phone_number: userData.phone_number,
     password: hashedPassword,
-    role_id: 3, // Default role: Customer
+    full_name: userData.full_name,
+    role_id: userData.role_id || 3, // Default role: Customer
     status: 'active',
   });
 
-  await userRepository.save(newUser);
-  return newUser;
+  const savedUser = await userRepository.save(newUser);
+
+  // Create role-specific record
+  if (savedUser.role_id === 3) {
+    const customerRepo = AppDataSource.getRepository(Customer);
+    const customer = customerRepo.create({
+      user_id: savedUser.id,
+      dob: userData.dob,
+      height: userData.height,
+      weight: userData.weight,
+      gender: userData.gender
+    });
+    await customerRepo.save(customer);
+  } else if (savedUser.role_id === 2) {
+    const staffRepo = AppDataSource.getRepository(Staff);
+    const staff = staffRepo.create({ user_id: savedUser.id });
+    await staffRepo.save(staff);
+  } else if (savedUser.role_id === 4) {
+    const partnerRepo = AppDataSource.getRepository(Partner);
+    const partner = partnerRepo.create({ user_id: savedUser.id });
+    await partnerRepo.save(partner);
+  } else if (savedUser.role_id === 5) {
+    const trainerRepo = AppDataSource.getRepository(Trainer);
+    const trainer = trainerRepo.create({ user_id: savedUser.id });
+    await trainerRepo.save(trainer);
+  }
+
+  return savedUser;
 };
 
 // Reset Password Logic
