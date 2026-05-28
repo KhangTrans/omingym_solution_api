@@ -1,6 +1,9 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, OneToOne } from 'typeorm';
 import { Role } from './role.entity.js';
 import { Customer } from './customer.entity.js';
+import { Partner } from './partner.entity.js';
+import { Trainer } from './trainer.entity.js';
+import { Staff } from './staff.entity.js';
 
 @Entity('users')
 export class User {
@@ -17,6 +20,15 @@ export class User {
   @OneToOne(() => Customer, (customer) => customer.user)
   customer?: Customer;
 
+  @OneToOne(() => Partner, (partner) => partner.user)
+  partner?: Partner;
+
+  @OneToOne(() => Trainer, (trainer) => trainer.user)
+  trainer?: Trainer;
+
+  @OneToOne(() => Staff, (staff) => staff.user)
+  staff?: Staff;
+
   @Column({ type: 'varchar', length: 100, unique: true, nullable: true })
   email?: string;
 
@@ -31,27 +43,6 @@ export class User {
 
   @Column({ type: 'varchar', length: 500, nullable: true })
   avatar_url?: string;
-
-  @Column({ type: 'date', nullable: true })
-  dob?: Date;
-
-  @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true })
-  height?: number;
-
-  @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true })
-  weight?: number;
-
-  @Column({ type: 'text', nullable: true })
-  medical_history?: string;
-
-  @Column({ type: 'int', nullable: true })
-  age?: number;
-
-  @Column({ type: 'varchar', length: 100, nullable: true })
-  gender?: string;
-
-  @Column({ type: 'text', nullable: true })
-  workout_goal?: string;
 
   @Column({ type: 'varchar', length: 20, default: 'inactive' })
   status!: string;

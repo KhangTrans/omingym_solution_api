@@ -1,10 +1,11 @@
 import { Router } from 'express';
-import { getUsers, createUser, updateProfile } from '../controllers/user.controller.js';
+import { getUsers, createUser, updateProfile, getProfile } from '../controllers/user.controller.js';
 import { isAuthenticated, authorizeRole } from '../middlewares/auth.middleware.js';
 
 const router = Router();
 
 // Route cho người dùng tự cập nhật profile cá nhân
+router.get('/profile', isAuthenticated, getProfile);
 router.put('/profile', isAuthenticated, updateProfile);
 
 // Chỉ Admin mới được xem danh sách Users và tạo User mới
