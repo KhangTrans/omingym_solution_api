@@ -1,11 +1,24 @@
 import { Request, Response } from 'express';
-import { fetchUsers, createNewUser, updateUserProfile } from '../services/user.service.js';
+import { fetchUsers, createNewUser, updateUserProfile, fetchUserProfile } from '../services/user.service.js';
 import { UpdateProfileDto, CreateUserDto } from '../dtos/user.dto.js';
 import { uploadImage } from '../utils/cloudinary.js';
 
 export const getUsers = async (req: Request, res: Response) => {
   const users = await fetchUsers();
   res.json(users);
+};
+
+export const getProfile = async (req: Request, res: Response) => {
+  try {
+    const userId = req.session.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+    const user = await fetchUserProfile(userId);
+    res.json(user);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
 };
 
 export const updateProfile = async (req: Request, res: Response) => {

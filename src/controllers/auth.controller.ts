@@ -109,7 +109,13 @@ export const getProfile = async (req: Request, res: Response) => {
     const userRepository = AppDataSource.getRepository(User);
     const user = await userRepository.findOne({
       where: { id: userId },
-      relations: { role: true }
+      relations: { 
+        role: true, 
+        customer: true,
+        trainer: true,
+        partner: true,
+        staff: true
+      }
     });
 
     if (!user) {
