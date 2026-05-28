@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import session from 'express-session';
 import userRoutes from './routes/user.routes.js';
 import authRoutes from './routes/auth.routes.js';
+import faqRoutes from './routes/faq.routes.js';
 import { AppDataSource } from './config/data-source.js';
 import { Role } from './models/role.entity.js';
 
@@ -57,6 +58,7 @@ AppDataSource.initialize()
 // Routes
 app.use('/api/users', userRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/faqs', faqRoutes);
 
 // Basic Route
 app.get('/', (req: Request, res: Response) => {
