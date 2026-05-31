@@ -45,8 +45,8 @@ export class Trainer {
   @Column({ name: "years_experience", type: "int", default: 0 })
   years_experience!: number;
 
-  @Column({ name: "application_id", type: "int", unique: true })
-  application_id!: number;
+  @Column({ name: "application_id", type: "int", unique: true, nullable: true })
+  application_id?: number;
 
   @OneToOne(() => TrainerApplication)
   @JoinColumn({ name: "application_id" })
