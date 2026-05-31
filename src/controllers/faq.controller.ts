@@ -1,11 +1,40 @@
 import { Request, Response } from 'express';
-import { fetchFaqs } from '../services/faq.service.js';
-import { GetFaqsQueryDto } from '../dtos/faq.dto.js';
+import { createFaq, fetchFaqs } from '../services/faq.service.js';
+import { CreateFaqDto, GetFaqsQueryDto } from '../dtos/faq.dto.js';
 
 const parsePublishedFilter = (value: unknown): boolean | undefined => {
   if (value === 'true') return true;
   if (value === 'false') return false;
   return undefined;
+};
+
+export const createFaqHandler = async (req: Request, res: Response) => {
+  try {
+    const userId = req.session.user!.id;
+
+    const { title, content, category, is_published }: CreateFaqDto = req.body;
+
+    if (!title?.trim() || !content?.trim() || !category?.trim()) {
+      return res.status(400).json({
+        message: 'Vui lòng nhập đầy đủ tiêu đề, nội dung và danh mục FAQ.',
+      });
+    }
+
+    if (typeof is_published !== 'undefined' && typeof is_published !== 'boolean') {
+      return res.status(400).json({ message: 'Trạng thái xuất bản không hợp lệ.' });
+    }
+
+    const faq = await createFaq(userId, {
+      title,
+      content,
+      category,
+      is_published,
+    });
+
+    res.status(201).json(faq);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
 };
 
 export const getFaqs = async (req: Request, res: Response) => {
