@@ -8,6 +8,8 @@ import { Partner } from "../models/partner.entity.js";
 import { Trainer } from "../models/trainer.entity.js";
 import { Staff } from "../models/staff.entity.js";
 import { Branch } from "../models/branch.entity.js";
+import { BranchImage } from "../models/branch-image.entity.js";
+import { BranchFacility } from "../models/branch-facility.entity.js";
 import { TrainerApplication } from "../models/trainer-application.entity.js";
 import { TrainerApplicationCertificate } from "../models/trainer-application-certificate.entity.js";
 import { TrainerCertificate } from "../models/trainer-certificate.entity.js";
@@ -36,6 +38,8 @@ export const AppDataSource = new DataSource({
     TrainerCertificate,
     Staff,
     Branch,
+    BranchImage,
+    BranchFacility,
     FAQ,
   ],
   migrations: [],
