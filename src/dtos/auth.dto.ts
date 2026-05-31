@@ -11,6 +11,7 @@ export interface CompleteRegistrationDto {
   identifier: string;
   otp: string;
   password: string;
+  role_id?: number; // 3: Customer, 5: Trainer
   personalInfo?: {
     full_name: string;
     dob?: string;

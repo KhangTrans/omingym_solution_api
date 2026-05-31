@@ -18,7 +18,7 @@ export const requestOTP = async (req: Request, res: Response) => {
 
 export const completeRegistration = async (req: Request, res: Response) => {
   try {
-    const { identifier, otp, password, personalInfo }: CompleteRegistrationDto = req.body;
+    const { identifier, otp, password, personalInfo, role_id }: CompleteRegistrationDto = req.body;
 
     // Verify OTP first
     const isOTPValid = await authService.verifyOTP(identifier, otp);
@@ -38,7 +38,7 @@ export const completeRegistration = async (req: Request, res: Response) => {
       email: identifier.includes('@') ? identifier : undefined,
       phone_number: !identifier.includes('@') ? identifier : undefined,
       password: decryptedPassword,
-      role_id: 3, // Default role: Customer
+      role_id: [3, 5].includes(Number(role_id)) ? Number(role_id) : 3, // Customer or Trainer
       full_name: personalInfo?.full_name || '',
       ...personalInfo,
       dob: personalInfo?.dob ? new Date(personalInfo.dob) : undefined
