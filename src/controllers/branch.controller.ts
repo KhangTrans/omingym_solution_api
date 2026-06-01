@@ -28,3 +28,31 @@ export const getBranches = async (req: Request, res: Response) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+export const getBranchDetail = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const result = await branchService.getBranchById(Number(id));
+    res.json({
+      message: 'Branch retrieved successfully',
+      data: result
+    });
+  } catch (error: any) {
+    res.status(404).json({ message: error.message });
+  }
+};
+
+export const updateBranch = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const branchData: Partial<CreateBranchDto> = req.body;
+
+    const result = await branchService.updateBranch(Number(id), branchData);
+    res.json({
+      message: 'Branch updated successfully',
+      data: result
+    });
+  } catch (error: any) {
+    res.status(error.message === 'Branch not found' ? 404 : 500).json({ message: error.message });
+  }
+};
