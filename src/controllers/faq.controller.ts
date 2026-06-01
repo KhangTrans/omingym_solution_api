@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { createFaq, fetchFaqs, updateFaq } from '../services/faq.service.js';
+import { createFaq, deleteFaq, fetchFaqs, updateFaq } from '../services/faq.service.js';
 import { CreateFaqDto, GetFaqsQueryDto, UpdateFaqDto } from '../dtos/faq.dto.js';
 
 const parsePublishedFilter = (value: unknown): boolean | undefined => {
@@ -69,6 +69,26 @@ export const updateFaqHandler = async (req: Request, res: Response) => {
     }
 
     res.json(faq);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const deleteFaqHandler = async (req: Request, res: Response) => {
+  try {
+    const faqId = Number(req.params.id);
+
+    if (!Number.isInteger(faqId) || faqId <= 0) {
+      return res.status(400).json({ message: 'FAQ không hợp lệ.' });
+    }
+
+    const deleted = await deleteFaq(faqId);
+
+    if (!deleted) {
+      return res.status(404).json({ message: 'Không tìm thấy FAQ cần xóa.' });
+    }
+
+    res.json({ message: 'Xóa FAQ thành công.' });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
