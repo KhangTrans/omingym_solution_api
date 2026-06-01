@@ -1,3 +1,4 @@
+
 import "reflect-metadata";
 import { DataSource } from "typeorm";
 import { User } from "../models/user.entity.js";
@@ -13,7 +14,9 @@ import { BranchFacility } from "../models/branch-facility.entity.js";
 import { TrainerApplication } from "../models/trainer-application.entity.js";
 import { TrainerApplicationCertificate } from "../models/trainer-application-certificate.entity.js";
 import { TrainerCertificate } from "../models/trainer-certificate.entity.js";
-import dotenv from "dotenv";
+import { MembershipPackage } from '../models/membership-package.entity.js';
+import { MembershipBranch } from '../models/membership-branch.entity.js';
+import dotenv from 'dotenv';
 
 dotenv.config();
 
@@ -41,7 +44,10 @@ export const AppDataSource = new DataSource({
     BranchImage,
     BranchFacility,
     FAQ,
+    MembershipPackage,
+    MembershipBranch
   ],
+
   migrations: [],
   subscribers: [],
 });

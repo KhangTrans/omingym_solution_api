@@ -1,3 +1,4 @@
+
 import express, { Application, Request, Response } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -9,6 +10,7 @@ import branchRoutes from "./routes/branch.routes.js";
 import { AppDataSource } from "./config/data-source.js";
 import { Role } from "./models/role.entity.js";
 import trainerApplicationRoutes from "./routes/trainer-application.routes.js";
+import membershipPackageRoutes from './routes/membership-package.routes.js';
 
 dotenv.config();
 
@@ -67,6 +69,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/faqs", faqRoutes);
 app.use("/api/branches", branchRoutes);
 app.use("/api/trainer-applications", trainerApplicationRoutes);
+app.use('/api/membership-packages', membershipPackageRoutes);
 
 // Basic Route
 app.get("/", (req: Request, res: Response) => {
