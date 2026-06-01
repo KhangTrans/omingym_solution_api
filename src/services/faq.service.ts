@@ -68,6 +68,18 @@ export const fetchFaqs = async (query: GetFaqsQueryDto) => {
   return qb.getMany();
 };
 
+export const deleteFaq = async (id: number) => {
+  const faqRepository = AppDataSource.getRepository(FAQ);
+  const faq = await faqRepository.findOne({ where: { id } });
+
+  if (!faq) {
+    return false;
+  }
+
+  await faqRepository.remove(faq);
+  return true;
+};
+
 export const updateFaq = async (id: number, payload: UpdateFaqDto) => {
   const faqRepository = AppDataSource.getRepository(FAQ);
   const faq = await faqRepository.findOne({ where: { id } });
