@@ -189,7 +189,25 @@ export const rejectTrainerApplication = async (
   application.reviewed_by = adminId;
   application.rejection_reason = rejectionReason;
 
-  return applicationRepo.save(application);
+  const savedApplication = await applicationRepo.save(application);
+
+  const webhookPayload = {
+    event: "trainer_rejected",
+    status: savedApplication.status,
+    userId: savedApplication.user_id,
+    applicationId: savedApplication.id,
+    phone: savedApplication.phone_number,
+    rejectReason: savedApplication.rejection_reason,
+    message: "Xin chào, hồ sơ huấn luyện viên của bạn đã bị từ chối.",
+  };
+
+  try {
+    await sendTrainerRejectedWebhook(webhookPayload);
+  } catch (error) {
+    console.error("n8n trainer rejected webhook failed", error);
+  }
+
+  return savedApplication;
 };
 
 // approve trainer
