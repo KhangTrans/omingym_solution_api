@@ -24,6 +24,106 @@ export const fetchUsers = async () => {
   return users;
 };
 
+export interface UserListParams {
+  page?: number;
+  limit?: number;
+  role?: string;
+  status?: string;
+  search?: string;
+}
+
+export interface UserListResponseData {
+  data: Omit<User, 'password'>[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
+const clearUserCache = async () => {
+  await deleteCache('users:all');
+  try {
+    const redis = (await import('../config/redis.js')).default;
+    const isRedisEnabled = (await import('../config/redis.js')).isRedisEnabled;
+    if (isRedisEnabled) {
+      const keys = await redis.keys('users:paginated:*');
+      if (keys && keys.length > 0) {
+        await redis.del(...keys);
+      }
+    }
+  } catch (err) {
+    console.error('Failed to clear paginated user cache:', err);
+  }
+};
+
+export const fetchUsersPaginated = async (params: UserListParams): Promise<UserListResponseData> => {
+  const page = Number(params.page) || 1;
+  const limit = Number(params.limit) || 15;
+  const skip = (page - 1) * limit;
+
+  const cacheKey = `users:paginated:${page}:${limit}:${params.role || 'all'}:${params.status || 'all'}:${params.search || ''}`;
+  const cachedData = await getCache<UserListResponseData>(cacheKey);
+  
+  if (cachedData) {
+    return cachedData;
+  }
+
+  const userRepository = AppDataSource.getRepository(User);
+  const queryBuilder = userRepository.createQueryBuilder('user')
+    .leftJoinAndSelect('user.role', 'role')
+    .leftJoinAndSelect('user.customer', 'customer')
+    .leftJoinAndSelect('user.partner', 'partner')
+    .leftJoinAndSelect('user.trainer', 'trainer')
+    .leftJoinAndSelect('user.staff', 'staff');
+
+  // Filter roles: Only show Customer, Trainer, Staff. Exclude Admin, Partner.
+  if (params.role && ['Customer', 'Trainer', 'Staff'].includes(params.role)) {
+    queryBuilder.andWhere('role.role_name = :role', { role: params.role });
+  } else {
+    queryBuilder.andWhere('role.role_name IN (:...allowedRoles)', { allowedRoles: ['Customer', 'Trainer', 'Staff'] });
+  }
+
+  // Filter status
+  if (params.status) {
+    queryBuilder.andWhere('user.status = :status', { status: params.status });
+  }
+
+  // Search filter
+  if (params.search && params.search.trim()) {
+    const searchPattern = `%${params.search.trim()}%`;
+    queryBuilder.andWhere(
+      '(user.full_name LIKE :search OR user.email LIKE :search OR user.phone_number LIKE :search)',
+      { search: searchPattern }
+    );
+  }
+
+  // Pagination & Order
+  queryBuilder
+    .orderBy('user.created_at', 'DESC')
+    .skip(skip)
+    .take(limit);
+
+  const [users, total] = await queryBuilder.getManyAndCount();
+
+  // Sanitize passwords
+  const sanitizedUsers = users.map(({ password, ...rest }) => rest) as Omit<User, 'password'>[];
+
+  const result = {
+    data: sanitizedUsers,
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit) || 1,
+    },
+  };
+
+  await setCache(cacheKey, result, 60); // Cache paginated results for 60 seconds
+  return result;
+};
+
 export const fetchUserProfile = async (userId: number) => {
   const userRepository = AppDataSource.getRepository(User);
   const user = await userRepository.findOne({
@@ -109,7 +209,7 @@ export const updateUserProfile = async (userId: number, updateData: UpdateProfil
   });
   
   // Invalidate cache
-  await deleteCache('users:all');
+  await clearUserCache();
   
   return updatedUser;
 };
@@ -128,7 +228,7 @@ export const updateUserStatus = async (userId: number, status: string) => {
   user.status = status;
   await userRepository.save(user);
 
-  await deleteCache('users:all');
+  await clearUserCache();
 
   return user;
 };

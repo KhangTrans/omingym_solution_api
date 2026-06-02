@@ -1,13 +1,18 @@
 import { Request, Response } from 'express';
-import { fetchUsers, createNewUser, updateUserProfile, fetchUserProfile, updateUserStatus } from '../services/user.service.js';
+import { fetchUsers, fetchUsersPaginated, createNewUser, updateUserProfile, fetchUserProfile, updateUserStatus } from '../services/user.service.js';
 import { UpdateProfileDto, CreateUserDto } from '../dtos/user.dto.js';
 import { uploadImage } from '../utils/cloudinary.js';
 
 export const getUsers = async (req: Request, res: Response) => {
   try {
-    const users = await fetchUsers();
-    const sanitized = users.map(({ password, ...rest }) => rest);
-    res.json(sanitized);
+    const page = req.query.page ? Number(req.query.page) : undefined;
+    const limit = req.query.limit ? Number(req.query.limit) : undefined;
+    const role = req.query.role ? String(req.query.role) : undefined;
+    const status = req.query.status ? String(req.query.status) : undefined;
+    const search = req.query.search ? String(req.query.search) : undefined;
+
+    const result = await fetchUsersPaginated({ page, limit, role, status, search });
+    res.json(result);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
