@@ -13,9 +13,7 @@ export const createPost = async (req: Request, res: Response) => {
     const post = await postService.createPost(user.id, postData, user.role);
 
     res.status(201).json({
-      message: user.role === 'Staff' 
-        ? 'Post created and pending approval' 
-        : 'Post created and published successfully',
+      message: 'Post created as draft successfully',
       post
     });
   } catch (error: any) {
@@ -39,9 +37,33 @@ export const getAllPosts = async (req: Request, res: Response) => {
 
 export const approvePost = async (req: Request, res: Response) => {
   try {
-    const postId = parseInt(req.params.id);
+    const postId = parseInt(req.params.id as string);
     const post = await postService.approvePost(postId);
-    res.json({ message: 'Post approved successfully', post });
+    res.json({ message: 'Post published successfully', post });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const rejectPost = async (req: Request, res: Response) => {
+  try {
+    const postId = parseInt(req.params.id as string);
+    const post = await postService.rejectPost(postId);
+    res.json({ message: 'Post rejected successfully', post });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const submitPostForApproval = async (req: Request, res: Response) => {
+  try {
+    const postId = parseInt(req.params.id as string);
+    const user = req.session.user;
+
+    if (!user) return res.status(401).json({ message: 'Unauthorized' });
+
+    const post = await postService.submitPostForApproval(postId, user.id, user.role);
+    res.json({ message: 'Post sent for approval successfully', post });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
@@ -49,7 +71,7 @@ export const approvePost = async (req: Request, res: Response) => {
 
 export const getPostById = async (req: Request, res: Response) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id as string);
     const userRole = req.session.user?.role;
     const post = await postService.getPostById(id, userRole);
     res.json(post);
@@ -61,7 +83,7 @@ export const getPostById = async (req: Request, res: Response) => {
 
 export const updatePost = async (req: Request, res: Response) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id as string);
     const user = req.session.user;
     if (!user) return res.status(401).json({ message: 'Unauthorized' });
 
@@ -77,7 +99,7 @@ export const updatePost = async (req: Request, res: Response) => {
 
 export const deletePost = async (req: Request, res: Response) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id as string);
     const user = req.session.user;
     if (!user) return res.status(401).json({ message: 'Unauthorized' });
 

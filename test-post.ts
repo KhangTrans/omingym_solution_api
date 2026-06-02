@@ -57,7 +57,7 @@ async function testPostFeature() {
       title: 'Staff Post Title',
       content: 'This post by staff should be unpublished'
     }, 'Staff');
-    console.log('Staff Post created. is_published:', staffPost.is_published);
+    console.log('Staff Post created. status:', staffPost.status);
 
     // 4. Test Partner tạo bài (publish ngay)
     console.log('\n--- Testing Partner Post ---');
@@ -65,7 +65,7 @@ async function testPostFeature() {
       title: 'Partner Post Title',
       content: 'This post by partner should be published immediately'
     }, 'Partner');
-    console.log('Partner Post created. is_published:', partnerPost.is_published);
+    console.log('Partner Post created. status:', partnerPost.status);
 
     // 5. Kiểm tra getAllPosts cho User thường (không thấy bài Staff)
     console.log('\n--- Testing getAllPosts (Public) ---');
@@ -85,7 +85,7 @@ async function testPostFeature() {
     console.log('\n--- Testing Admin Approval ---');
     await approvePost(staffPost.id);
     const approvedStaffPost = await AppDataSource.getRepository('Post').findOne({ where: { id: staffPost.id } }) as any;
-    console.log('Staff Post after approval. is_published:', approvedStaffPost?.is_published);
+    console.log('Staff Post after approval. status:', approvedStaffPost?.status);
 
     console.log('\n--- ALL TESTS COMPLETED ---');
     process.exit(0);

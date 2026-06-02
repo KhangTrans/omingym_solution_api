@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import { User } from './user.entity.js';
 import { PostImage } from './post-image.entity.js';
+import { PostStatus } from './post-status.enum.js';
 
 @Entity('post')
 export class Post {
@@ -20,8 +21,13 @@ export class Post {
   @Column({ type: 'text', nullable: true })
   content?: string;
 
-  @Column({ type: 'boolean', default: false })
-  is_published!: boolean;
+  @Column({
+    type: 'enum',
+    enum: PostStatus,
+    enumName: 'post_status',
+    default: PostStatus.Draft,
+  })
+  status!: PostStatus;
 
   @CreateDateColumn({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   created_at!: Date;

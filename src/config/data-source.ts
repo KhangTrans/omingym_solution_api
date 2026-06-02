@@ -29,7 +29,7 @@ export const AppDataSource = new DataSource({
   username: process.env.DB_USER,
   password: process.env.DB_PASS,
   database: process.env.DB_NAME,
-  synchronize: false, // Bật lại để TypeORM tạo bảng sạch
+  synchronize: true, // Bật lại để TypeORM tạo bảng sạch
   logging: false,
   entities: [
     User,

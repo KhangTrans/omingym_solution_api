@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createPost, getAllPosts, approvePost, getPostById, updatePost, deletePost } from '../controllers/post.controller.js';
+import { createPost, getAllPosts, approvePost, rejectPost, submitPostForApproval, getPostById, updatePost, deletePost } from '../controllers/post.controller.js';
 import { isAuthenticated, authorizeRole } from '../middlewares/auth.middleware.js';
 
 const router = Router();
@@ -15,7 +15,11 @@ router.post('/', isAuthenticated, authorizeRole(['Staff', 'Partner', 'Admin']), 
 router.put('/:id', isAuthenticated, authorizeRole(['Staff', 'Partner', 'Admin']), updatePost);
 router.delete('/:id', isAuthenticated, authorizeRole(['Staff', 'Partner', 'Admin']), deletePost);
 
-// Admin và Partner có quyền duyệt bài viết
-router.patch('/:id/approve', isAuthenticated, authorizeRole(['Admin', 'Partner']), approvePost);
+// Tác giả gửi bài lên chờ duyệt
+router.patch('/:id/submit', isAuthenticated, authorizeRole(['Staff', 'Partner', 'Admin']), submitPostForApproval);
+
+// Admin duyệt hoặc từ chối bài viết
+router.patch('/:id/approve', isAuthenticated, authorizeRole(['Admin']), approvePost);
+router.patch('/:id/reject', isAuthenticated, authorizeRole(['Admin']), rejectPost);
 
 export default router;
