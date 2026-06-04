@@ -6,6 +6,7 @@ import { Customer } from '../models/customer.entity.js';
 import { CustomerSubscription } from '../models/customer-subscription.entity.js';
 import { Transaction } from '../models/transaction.entity.js';
 import { User } from '../models/user.entity.js';
+import { sendBookingSuccessEmail } from '../utils/email.js';
 
 /**
  * Helper to normalize and remove Vietnamese accents for PayOS compatibility (max 25 chars)
@@ -19,6 +20,64 @@ const cleanString = (str: string): string => {
     .replace(/[^a-zA-Z0-9 ]/g, '') // Keep alphanumeric and spaces
     .trim()
     .substring(0, 25);
+};
+
+/**
+ * Shared helper to activate user subscription and send confirmation email immediately
+ */
+const activateSubscriptionAndSendEmail = async (
+  transaction: Transaction,
+  subscription: CustomerSubscription
+) => {
+  const subscriptionRepository = AppDataSource.getRepository(CustomerSubscription);
+  const packageRepository = AppDataSource.getRepository(MembershipPackage);
+
+  subscription.status = 'active';
+  subscription.start_date = new Date();
+
+  // Calculate end date based on membership package duration
+  const membershipPackage = await packageRepository.findOne({
+    where: { id: subscription.membership_id },
+  });
+
+  const durationMonths = membershipPackage?.duration_months || 1;
+  const endDate = new Date();
+  endDate.setMonth(endDate.getMonth() + durationMonths);
+  subscription.end_date = endDate;
+
+  await subscriptionRepository.save(subscription);
+  console.log(`Successfully activated subscription ID ${subscription.id} for Customer ID ${subscription.customer_id}`);
+
+  // Fetch Customer user relation to get the email and name
+  const customerRepository = AppDataSource.getRepository(Customer);
+  const customer = await customerRepository.findOne({
+    where: { id: subscription.customer_id },
+    relations: { user: true },
+  });
+
+  if (customer && customer.user && customer.user.email) {
+    const userEmail = customer.user.email;
+    const userName = customer.user.full_name || 'Khách hàng';
+    const packageName = membershipPackage?.name || 'Gói tập';
+    const packagePrice = Number(membershipPackage?.price || 0);
+
+    try {
+      await sendBookingSuccessEmail(
+        userEmail,
+        userName,
+        packageName,
+        packagePrice,
+        subscription.start_date,
+        endDate,
+        transaction.id
+      );
+      console.log(`Booking success email sent to ${userEmail}`);
+    } catch (mailErr) {
+      console.error('Failed to send booking success email:', mailErr);
+    }
+  } else {
+    console.warn(`Could not send booking success email: Customer user details or email not found for Subscription ID ${subscription.id}`);
+  }
 };
 
 export const createMembershipPayment = async (req: Request, res: Response) => {
@@ -143,24 +202,9 @@ export const handlePayOSWebhook = async (req: Request, res: Response) => {
       transaction.payment_time = new Date();
       await transactionRepository.save(transaction);
 
-      // Activate the subscription
+      // Activate the subscription and send booking email
       if (transaction.customer_subscription) {
-        const subscription = transaction.customer_subscription;
-        subscription.status = 'active';
-        subscription.start_date = new Date();
-
-        // Calculate end date based on membership package duration
-        const membershipPackage = await packageRepository.findOne({
-          where: { id: subscription.membership_id },
-        });
-
-        const durationMonths = membershipPackage?.duration_months || 1;
-        const endDate = new Date();
-        endDate.setMonth(endDate.getMonth() + durationMonths);
-        subscription.end_date = endDate;
-
-        await subscriptionRepository.save(subscription);
-        console.log(`Successfully activated subscription ID ${subscription.id} for Customer ID ${subscription.customer_id}`);
+        await activateSubscriptionAndSendEmail(transaction, transaction.customer_subscription);
       }
     } else {
       // Payment was cancelled or failed
@@ -214,20 +258,7 @@ export const getTransactionStatus = async (req: Request, res: Response) => {
           await transactionRepository.save(transaction);
 
           if (transaction.customer_subscription) {
-            const subscription = transaction.customer_subscription;
-            subscription.status = 'active';
-            subscription.start_date = new Date();
-
-            const membershipPackage = await packageRepository.findOne({
-              where: { id: subscription.membership_id },
-            });
-
-            const durationMonths = membershipPackage?.duration_months || 1;
-            const endDate = new Date();
-            endDate.setMonth(endDate.getMonth() + durationMonths);
-            subscription.end_date = endDate;
-
-            await subscriptionRepository.save(subscription);
+            await activateSubscriptionAndSendEmail(transaction, transaction.customer_subscription);
           }
         } else if (payosInfo.status === 'CANCELLED') {
           transaction.transaction_status = 'cancelled';
