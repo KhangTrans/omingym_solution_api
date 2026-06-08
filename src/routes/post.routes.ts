@@ -19,7 +19,7 @@ router.delete('/:id', isAuthenticated, authorizeRole(['Staff', 'BranchManager', 
 router.patch('/:id/submit', isAuthenticated, authorizeRole(['Staff', 'BranchManager', 'Admin']), submitPostForApproval);
 
 // Admin duyệt hoặc từ chối bài viết
-router.patch('/:id/approve', isAuthenticated, authorizeRole(['Admin']), approvePost);
-router.patch('/:id/reject', isAuthenticated, authorizeRole(['Admin']), rejectPost);
+router.patch('/:id/approve', isAuthenticated, authorizeRole(['Admin', 'BranchManager']), approvePost);
+router.patch('/:id/reject', isAuthenticated, authorizeRole(['Admin', 'BranchManager']), rejectPost);
 
 export default router;

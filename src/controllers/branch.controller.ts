@@ -48,21 +48,12 @@ export const updateBranch = async (req: Request, res: Response) => {
     const branchData: Partial<CreateBranchDto> = req.body;
     const user = req.session?.user;
 
-    if (!user) {
-      return res.status(401).json({ message: 'Bạn cần đăng nhập để thực hiện chức năng này.' });
-    }
-
     // Lấy chi nhánh hiện tại để kiểm tra manager_id
     const branch = await branchService.getBranchById(Number(id));
 
     // Nếu là BranchManager, chỉ được sửa chi nhánh của chính mình quản lý
-    if (user.role === 'BranchManager' && branch.manager_id !== user.id) {
+    if (user?.role === 'BranchManager' && branch.manager_id !== user.id) {
       return res.status(403).json({ message: 'Bạn không có quyền chỉnh sửa chi nhánh này.' });
-    }
-
-    // Nếu không phải Admin hoặc BranchManager thì không có quyền
-    if (user.role !== 'Admin' && user.role !== 'BranchManager') {
-      return res.status(403).json({ message: 'Bạn không có quyền truy cập vào chức năng này.' });
     }
 
     const result = await branchService.updateBranch(Number(id), branchData);

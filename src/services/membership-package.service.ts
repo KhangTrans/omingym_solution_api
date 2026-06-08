@@ -15,7 +15,6 @@ export const fetchAllPackages = async () => {
 
   const packageRepository = AppDataSource.getRepository(MembershipPackage);
   const packages = await packageRepository.find({
-    where: { status: 'active' },
     relations: { branches: true },
     order: { created_at: 'DESC' }
   });
