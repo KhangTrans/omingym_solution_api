@@ -92,9 +92,12 @@ export const createMembershipPayment = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Vui lòng cung cấp packageId.' });
     }
 
-    // 1. Fetch Membership Package
+        // 1. Fetch Membership Package
     const packageRepository = AppDataSource.getRepository(MembershipPackage);
-    const membershipPackage = await packageRepository.findOne({ where: { id: Number(packageId) } });
+    const membershipPackage = await packageRepository.findOne({
+      where: { id: Number(packageId) },
+      relations: { branches: true }
+    });
     if (!membershipPackage) {
       return res.status(404).json({ message: 'Không tìm thấy gói thành viên này.' });
     }
@@ -107,8 +110,29 @@ export const createMembershipPayment = async (req: Request, res: Response) => {
       await customerRepository.save(customer);
     }
 
-    // 3. Create a CustomerSubscription in 'pending' status
+    // Kiểm tra xem khách hàng đã có gói tập đang hoạt động tại chi nhánh này chưa
     const subscriptionRepository = AppDataSource.getRepository(CustomerSubscription);
+    const activeSubscriptions = await subscriptionRepository.find({
+      where: { customer_id: customer.id, status: 'active' },
+      relations: { membership: { branches: true } }
+    });
+
+    const newPackageBranchIds = new Set(membershipPackage.branches?.map(b => b.branch_id) || []);
+
+    for (const sub of activeSubscriptions) {
+      if (sub.membership?.branches) {
+        for (const mb of sub.membership.branches) {
+          if (newPackageBranchIds.has(mb.branch_id)) {
+            const endDateStr = sub.end_date ? new Date(sub.end_date).toLocaleDateString('vi-VN') : 'chưa xác định';
+            return res.status(400).json({
+              message: `Bạn đang có gói tập "${sub.membership.name}" hoạt động tại chi nhánh này và vẫn còn hạn đến ngày ${endDateStr}.`
+            });
+          }
+        }
+      }
+    }
+
+    // 3. Create a CustomerSubscription in 'pending' status
     const subscription = subscriptionRepository.create({
       customer_id: customer.id,
       membership_id: membershipPackage.id,
