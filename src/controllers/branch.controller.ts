@@ -21,8 +21,16 @@ export const createBranch = async (req: Request, res: Response) => {
 
 export const getBranches = async (req: Request, res: Response) => {
   try {
-    const { managerId } = req.query;
-    const result = await branchService.getAllBranches(managerId ? Number(managerId) : undefined);
+    const { managerId, province, district, status, search, page, limit } = req.query;
+    const result = await branchService.getAllBranches(
+      managerId ? Number(managerId) : undefined,
+      province as string,
+      district as string,
+      status as string,
+      search as string,
+      page ? Number(page) : undefined,
+      limit ? Number(limit) : undefined
+    );
     res.json(result);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
@@ -31,8 +39,19 @@ export const getBranches = async (req: Request, res: Response) => {
 
 export const getBranchDetail = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
-    const result = await branchService.getBranchById(Number(id));
+    const { id } = req.params; // Can be an ID or a slug
+    const { trainerPage, trainerLimit } = req.query;
+
+    const tPage = trainerPage ? Number(trainerPage) : 1;
+    const tLimit = trainerLimit ? Number(trainerLimit) : 5;
+
+    let result;
+    if (/^\d+$/.test(id as string)) {
+      result = await branchService.getBranchByIdOrSlug(Number(id), undefined, tPage, tLimit);
+    } else {
+      result = await branchService.getBranchByIdOrSlug(undefined, id as string, tPage, tLimit);
+    }
+
     res.json({
       message: 'Branch retrieved successfully',
       data: result

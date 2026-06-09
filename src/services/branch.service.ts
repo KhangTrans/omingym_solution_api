@@ -3,6 +3,7 @@ import { Branch } from '../models/branch.entity.js';
 import { BranchImage } from '../models/branch-image.entity.js';
 import { BranchFacility } from '../models/branch-facility.entity.js';
 import { BranchFacilityImage } from '../models/branch-facility-image.entity.js';
+import { Trainer } from '../models/trainer.entity.js';
 import { CreateBranchDto } from '../dtos/branch.dto.js';
 
 export const createBranch = async (data: CreateBranchDto) => {
@@ -69,12 +70,65 @@ export const createBranch = async (data: CreateBranchDto) => {
   });
 };
 
-export const getAllBranches = async (managerId?: number) => {
+export const getAllBranches = async (
+  managerId?: number,
+  province?: string,
+  district?: string,
+  status?: string,
+  search?: string,
+  page?: number,
+  limit?: number
+) => {
   const branchRepo = AppDataSource.getRepository(Branch);
-  return await branchRepo.find({
-    where: managerId ? { manager_id: managerId } : {},
-    order: { id: 'DESC' }
-  });
+  const queryBuilder = branchRepo.createQueryBuilder('branch');
+
+  // Mặc định: chỉ hiển thị active branches trừ khi yêu cầu lấy 'all' hoặc một status cụ thể
+  if (status !== 'all') {
+    const activeStatus = status || 'active';
+    queryBuilder.andWhere('branch.status = :status', { status: activeStatus });
+  }
+
+  if (managerId) {
+    queryBuilder.andWhere('branch.manager_id = :managerId', { managerId });
+  }
+
+  if (province) {
+    queryBuilder.andWhere('branch.province = :province', { province });
+  }
+
+  if (district) {
+    queryBuilder.andWhere('branch.district = :district', { district });
+  }
+
+  if (search) {
+    queryBuilder.andWhere(
+      '(LOWER(branch.branch_name) LIKE LOWER(:search) OR LOWER(branch.address) LIKE LOWER(:search))',
+      { search: `%${search}%` }
+    );
+  }
+
+  queryBuilder.orderBy('branch.id', 'DESC');
+
+  if (page !== undefined || limit !== undefined) {
+    const p = page || 1;
+    const l = limit || 10;
+    const skip = (p - 1) * l;
+
+    queryBuilder.skip(skip).take(l);
+    const [branches, total] = await queryBuilder.getManyAndCount();
+
+    return {
+      branches,
+      meta: {
+        total,
+        page: p,
+        limit: l,
+        totalPages: Math.ceil(total / l)
+      }
+    };
+  }
+
+  return await queryBuilder.getMany();
 };
 
 export const getBranchById = async (branchId: number) => {
@@ -189,4 +243,92 @@ export const updateBranch = async (branchId: number, data: Partial<CreateBranchD
 
     return updatedBranch;
   });
+};
+
+export const slugify = (text: string): string => {
+  return text
+    .toString()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove accents
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-') // Replace spaces with -
+    .replace(/[^\w\-]+/g, '') // Remove non-word chars
+    .replace(/\-\-+/g, '-'); // Replace multiple - with single -
+};
+
+export const getBranchByIdOrSlug = async (
+  branchId?: number,
+  slug?: string,
+  trainerPage: number = 1,
+  trainerLimit: number = 5
+) => {
+  const branchRepo = AppDataSource.getRepository(Branch);
+  let branch;
+
+  if (branchId !== undefined) {
+    branch = await branchRepo.findOne({ where: { id: branchId } });
+  } else if (slug !== undefined) {
+    const allBranches = await branchRepo.find();
+    branch = allBranches.find(b => b.branch_name && slugify(b.branch_name) === slug);
+  }
+
+  if (!branch) {
+    throw new Error('Branch not found');
+  }
+
+  const imageRepo = AppDataSource.getRepository(BranchImage);
+  const facilityRepo = AppDataSource.getRepository(BranchFacility);
+
+  const [images, facilities] = await Promise.all([
+    imageRepo.find({ where: { branch_id: branch.id }, order: { sort_order: 'ASC' } }),
+    facilityRepo.find({ where: { branch_id: branch.id } })
+  ]);
+
+  const facilityImageRepo = AppDataSource.getRepository(BranchFacilityImage);
+  const facilitiesWithImages = await Promise.all(
+    facilities.map(async (fac) => {
+      const facImages = await facilityImageRepo.find({
+        where: { facility_id: fac.id },
+        order: { sort_order: 'ASC' }
+      });
+      return {
+        ...fac,
+        images: facImages
+      };
+    })
+  );
+
+  // Lấy danh sách trainer kèm phân trang
+  const trainerRepo = AppDataSource.getRepository(Trainer);
+  const skip = (trainerPage - 1) * trainerLimit;
+
+  const [trainers, trainerCount] = await trainerRepo.findAndCount({
+    where: { branch_id: branch.id, is_active: true },
+    relations: { user: true },
+    skip,
+    take: trainerLimit,
+    order: { id: 'DESC' }
+  });
+
+  // Loại bỏ password của user trước khi trả về
+  const cleanedTrainers = trainers.map(t => {
+    if (t.user) {
+      delete t.user.password;
+    }
+    return t;
+  });
+
+  return {
+    ...branch,
+    images,
+    facilities: facilitiesWithImages,
+    trainers: cleanedTrainers,
+    trainerMeta: {
+      total: trainerCount,
+      page: trainerPage,
+      limit: trainerLimit,
+      totalPages: Math.ceil(trainerCount / trainerLimit)
+    }
+  };
 };
