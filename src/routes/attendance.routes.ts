@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   checkInHandler,
+  checkInFaceHandler,
   checkOutHandler,
   getMyAttendanceLogsHandler,
   getAttendanceLogsHandler,
@@ -13,6 +14,7 @@ const router = Router();
 
 // Điểm danh check-in và check-out (bất kỳ ai đã đăng nhập đều có thể check-in/out cho ca của mình)
 router.post('/check-in', isAuthenticated, checkInHandler);
+router.post('/check-in-face', isAuthenticated, checkInFaceHandler);
 router.post('/check-out', isAuthenticated, checkOutHandler);
 
 // Nhân viên tự xem lịch sử điểm danh của bản thân

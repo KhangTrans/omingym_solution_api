@@ -28,3 +28,8 @@ export interface UpdateProfileDto {
 export interface CreateUserDto {
   name: string;
 }
+
+export interface RegisterFaceEmbeddingDto {
+  face_vector?: number[];
+  image_base64?: string;
+}

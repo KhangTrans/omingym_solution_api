@@ -2,6 +2,7 @@ import { AppDataSource } from '../config/data-source.js'; // Note: IsNull is fro
 import { IsNull as TypeormIsNull } from 'typeorm';
 import { Attendance } from '../models/attendance.entity.js';
 import { WorkShift } from '../models/work-shift.entity.js';
+import { User } from '../models/user.entity.js';
 import { UpdateAttendanceDto, GetAttendanceQueryDto } from '../dtos/attendance.dto.js';
 import crypto from 'crypto';
 
@@ -191,6 +192,122 @@ export const updateAttendanceRecord = async (id: number, payload: UpdateAttendan
   if (payload.notes !== undefined) {
     attendance.notes = payload.notes;
   }
+
+  return attendanceRepository.save(attendance);
+};
+
+export const checkInFace = async (
+  userId: number,
+  shiftId: number,
+  faceVector: number[],
+  auth: { checkInCode?: string; dynamicQrToken?: string }
+) => {
+  const shiftRepository = AppDataSource.getRepository(WorkShift);
+  const attendanceRepository = AppDataSource.getRepository(Attendance);
+  const userRepository = AppDataSource.getRepository(User);
+
+  // 1. Kiểm tra ca làm việc
+  const shift = await shiftRepository.findOne({ where: { id: shiftId } });
+  if (!shift) {
+    throw new Error('Ca làm việc không tồn tại.');
+  }
+
+  if (shift.user_id !== userId) {
+    throw new Error('Ca làm việc này không thuộc về bạn.');
+  }
+
+  if (shift.status === 'cancelled') {
+    throw new Error('Ca làm việc đã bị hủy.');
+  }
+
+  // 2. Xác thực vị trí/sự hiện diện nếu có truyền tham số
+  if (auth.dynamicQrToken) {
+    const parts = auth.dynamicQrToken.split(':');
+    if (parts.length !== 3) {
+      throw new Error('Mã QR không đúng định dạng.');
+    }
+    const [branchIdStr, timeStepStr, signature] = parts;
+    const parsedBranchId = Number(branchIdStr);
+    const parsedTimeStep = Number(timeStepStr);
+    const serverTimeStep = Math.floor(Date.now() / 30000);
+
+    if (Math.abs(serverTimeStep - parsedTimeStep) > 1) {
+      throw new Error('Mã QR đã hết hạn. Vui lòng quét mã mới.');
+    }
+
+    if (parsedBranchId !== shift.branch_id) {
+      throw new Error('Mã QR này thuộc chi nhánh khác, không khớp với ca của bạn.');
+    }
+
+    const secret = process.env.AES_SECRET || 'omnigym_qr_secret_fallback';
+    const expectedHash = crypto.createHmac('sha256', secret)
+      .update(`${parsedBranchId}:${parsedTimeStep}`)
+      .digest('hex');
+
+    if (expectedHash !== signature) {
+      throw new Error('Xác thực chữ ký mã QR thất bại.');
+    }
+  } else if (auth.checkInCode) {
+    if (!shift.check_in_code || shift.check_in_code.toUpperCase() !== auth.checkInCode.trim().toUpperCase()) {
+      throw new Error('Mã Check-in không chính xác. Vui lòng kiểm tra lại với Quản lý.');
+    }
+  }
+
+  // 3. So khớp khuôn mặt
+  const user = await userRepository.findOne({ where: { id: userId } });
+  if (!user) {
+    throw new Error('Không tìm thấy thông tin người dùng.');
+  }
+  if (!user.face_embedding) {
+    throw new Error('Bạn chưa đăng ký khuôn mặt trên hệ thống.');
+  }
+
+  let savedVector: number[];
+  try {
+    savedVector = JSON.parse(user.face_embedding);
+  } catch (err) {
+    throw new Error('Dữ liệu khuôn mặt đã lưu không hợp lệ.');
+  }
+
+  if (!Array.isArray(faceVector) || faceVector.length !== savedVector.length) {
+    throw new Error(`Mẫu khuôn mặt gửi lên không hợp lệ hoặc kích thước không khớp (Yêu cầu: ${savedVector.length} chiều).`);
+  }
+
+  // Tính khoảng cách Euclidean
+  let sum = 0;
+  for (let i = 0; i < savedVector.length; i++) {
+    sum += Math.pow(savedVector[i] - faceVector[i], 2);
+  }
+  const distance = Math.sqrt(sum);
+
+  const threshold = 0.6; // Ngưỡng nhận diện tiêu chuẩn
+  if (distance > threshold) {
+    throw new Error(`Nhận diện khuôn mặt thất bại (Độ lệch: ${distance.toFixed(4)}).`);
+  }
+
+  // 4. Lưu log điểm danh
+  let attendance = await attendanceRepository.findOne({ where: { shift_id: shiftId } });
+  if (attendance && attendance.check_in_time) {
+    throw new Error('Bạn đã Check-in cho ca làm việc này rồi.');
+  }
+
+  const dateString = typeof shift.date === 'string' ? shift.date : (shift.date as Date).toISOString().split('T')[0];
+  const scheduledStart = new Date(`${dateString}T${shift.start_time}:00`);
+
+  const now = new Date();
+  const gracePeriodMinutes = 15;
+  const isLate = now.getTime() > scheduledStart.getTime() + gracePeriodMinutes * 60 * 1000;
+
+  if (!attendance) {
+    attendance = attendanceRepository.create({
+      shift_id: shiftId,
+      user_id: userId,
+    });
+  }
+
+  attendance.check_in_time = now;
+  attendance.status = isLate ? 'late' : 'present';
+  attendance.notes = `Face Check-in (Khoảng cách: ${distance.toFixed(4)})`;
 
   return attendanceRepository.save(attendance);
 };

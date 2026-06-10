@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
-import { fetchUsers, fetchUsersPaginated, createNewUser, updateUserProfile, fetchUserProfile, updateUserStatus } from '../services/user.service.js';
-import { UpdateProfileDto, CreateUserDto } from '../dtos/user.dto.js';
+import { fetchUsers, fetchUsersPaginated, createNewUser, updateUserProfile, fetchUserProfile, updateUserStatus, saveUserFaceEmbedding } from '../services/user.service.js';
+import { UpdateProfileDto, CreateUserDto, RegisterFaceEmbeddingDto } from '../dtos/user.dto.js';
 import { uploadImage } from '../utils/cloudinary.js';
+import axios from 'axios';
 
 export const getUsers = async (req: Request, res: Response) => {
   try {
@@ -92,5 +93,43 @@ export const updateUserStatusHandler = async (req: Request, res: Response) => {
     return res.json({ message: 'Status updated successfully', user: rest });
   } catch (error: any) {
     return res.status(500).json({ message: error.message });
+  }
+};
+
+export const registerFaceEmbedding = async (req: Request, res: Response) => {
+  try {
+    const userId = req.session.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const { face_vector, image_base64 }: RegisterFaceEmbeddingDto = req.body;
+    
+    let vector: number[] | undefined = face_vector;
+
+    if (image_base64 && image_base64.trim()) {
+      try {
+        const aiUrl = process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000';
+        const aiResponse = await axios.post(`${aiUrl}/extract-vector-base64`, {
+          image_base64,
+        });
+        vector = aiResponse.data.face_vector;
+      } catch (err: any) {
+        const errMsg = err.response?.data?.detail || err.message;
+        return res.status(400).json({ message: `Lỗi kết nối hoặc xử lý từ server AI: ${errMsg}` });
+      }
+    }
+
+    if (!vector || !Array.isArray(vector) || vector.length === 0) {
+      return res.status(400).json({ message: 'Vui lòng cung cấp vector khuôn mặt hoặc ảnh dạng base64' });
+    }
+
+    const user = await saveUserFaceEmbedding(userId, vector);
+    res.status(200).json({
+      message: 'Đăng ký khuôn mặt thành công!',
+      user,
+    });
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
   }
 };

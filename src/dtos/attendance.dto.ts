@@ -4,6 +4,14 @@ export interface CheckInDto {
   dynamic_qr_token?: string;
 }
 
+export interface CheckInFaceDto {
+  shift_id: number;
+  face_vector?: number[];
+  image_base64?: string;
+  dynamic_qr_token?: string;
+  check_in_code?: string;
+}
+
 export interface CheckOutDto {
   shift_id?: number;
 }

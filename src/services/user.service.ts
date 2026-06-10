@@ -247,3 +247,22 @@ export const createNewUser = (userData: CreateUserDto) => {
   // Logic to save user to database would go here
   return { id: Date.now(), ...userData };
 };
+
+export const saveUserFaceEmbedding = async (userId: number, faceVector: number[]) => {
+  const userRepository = AppDataSource.getRepository(User);
+  const user = await userRepository.findOne({ where: { id: userId } });
+
+  if (!user) {
+    throw new Error('Không tìm thấy người dùng');
+  }
+
+  if (!Array.isArray(faceVector) || faceVector.length === 0 || faceVector.some(n => typeof n !== 'number')) {
+    throw new Error('Vector khuôn mặt không hợp lệ');
+  }
+
+  user.face_embedding = JSON.stringify(faceVector);
+  await userRepository.save(user);
+
+  await clearUserCache();
+  return { id: user.id, email: user.email, full_name: user.full_name };
+};

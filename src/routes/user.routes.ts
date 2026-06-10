@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getUsers, createUser, updateProfile, getProfile, updateUserStatusHandler } from '../controllers/user.controller.js';
+import { getUsers, createUser, updateProfile, getProfile, updateUserStatusHandler, registerFaceEmbedding } from '../controllers/user.controller.js';
 import { isAuthenticated, authorizeRole } from '../middlewares/auth.middleware.js';
 
 const router = Router();
@@ -7,6 +7,7 @@ const router = Router();
 // Route cho người dùng tự cập nhật profile cá nhân
 router.get('/profile', isAuthenticated, getProfile);
 router.put('/profile', isAuthenticated, updateProfile);
+router.post('/profile/face-embedding', isAuthenticated, registerFaceEmbedding);
 
 // Admin và Staff được xem danh sách Users
 router.get('/', isAuthenticated, authorizeRole(['Admin', 'Staff']), getUsers);

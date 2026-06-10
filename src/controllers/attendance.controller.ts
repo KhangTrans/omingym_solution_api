@@ -1,13 +1,15 @@
 import { Request, Response } from 'express';
 import {
   checkIn,
+  checkInFace,
   checkOut,
   fetchAttendanceLogs,
   fetchMyAttendanceLogs,
   updateAttendanceRecord,
   generateDynamicBranchQrToken,
 } from '../services/attendance.service.js';
-import { CheckInDto, CheckOutDto, UpdateAttendanceDto, GetAttendanceQueryDto } from '../dtos/attendance.dto.js';
+import { CheckInDto, CheckInFaceDto, CheckOutDto, UpdateAttendanceDto, GetAttendanceQueryDto } from '../dtos/attendance.dto.js';
+import axios from 'axios';
 
 export const checkInHandler = async (req: Request, res: Response) => {
   try {
@@ -28,6 +30,48 @@ export const checkInHandler = async (req: Request, res: Response) => {
     
     res.status(200).json({
       message: 'Check-in thành công!',
+      attendance,
+    });
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+export const checkInFaceHandler = async (req: Request, res: Response) => {
+  try {
+    const userId = req.session.user!.id;
+    const { shift_id, face_vector, image_base64, check_in_code, dynamic_qr_token }: CheckInFaceDto = req.body;
+
+    if (!shift_id) {
+      return res.status(400).json({ message: 'Vui lòng cung cấp shift_id để thực hiện Check-in.' });
+    }
+
+    let vector: number[] | undefined = face_vector;
+
+    if (image_base64 && image_base64.trim()) {
+      try {
+        const aiUrl = process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000';
+        const aiResponse = await axios.post(`${aiUrl}/extract-vector-base64`, {
+          image_base64,
+        });
+        vector = aiResponse.data.face_vector;
+      } catch (err: any) {
+        const errMsg = err.response?.data?.detail || err.message;
+        return res.status(400).json({ message: `Lỗi kết nối hoặc xử lý từ server AI: ${errMsg}` });
+      }
+    }
+
+    if (!vector || !Array.isArray(vector) || vector.length === 0) {
+      return res.status(400).json({ message: 'Vui lòng cung cấp vector khuôn mặt hoặc ảnh dạng base64.' });
+    }
+
+    const attendance = await checkInFace(userId, shift_id, vector, {
+      checkInCode: check_in_code,
+      dynamicQrToken: dynamic_qr_token,
+    });
+
+    res.status(200).json({
+      message: 'Check-in bằng nhận diện khuôn mặt thành công!',
       attendance,
     });
   } catch (error: any) {

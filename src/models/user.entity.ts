@@ -43,6 +43,9 @@ export class User {
   @Column({ type: 'varchar', length: 20, default: 'inactive' })
   status!: string;
 
+  @Column({ type: 'text', nullable: true })
+  face_embedding?: string;
+
   @CreateDateColumn({ type: 'timestamp' })
   created_at!: Date;
 
