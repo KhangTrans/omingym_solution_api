@@ -39,4 +39,7 @@ export class Branch {
 
   @Column({ type: 'varchar', length: 500, nullable: true })
   image_url?: string;
+
+  @Column({ name: 'monthly_leave_limit', type: 'int', default: 0 })
+  monthly_leave_limit!: number;
 }

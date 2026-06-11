@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsOptional, IsInt, IsArray, ValidateNested, IsBoolean } from 'class-validator';
+import { IsNotEmpty, IsString, IsOptional, IsInt, IsArray, ValidateNested, IsBoolean, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class BranchImageDto {
@@ -81,6 +81,11 @@ export class CreateBranchDto {
   @IsOptional()
   @IsString()
   image_url?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  monthly_leave_limit?: number;
 
   @IsOptional()
   @IsArray()
