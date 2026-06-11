@@ -18,12 +18,12 @@ export const generateDynamicBranchQrToken = (branchId: number): string => {
 export const checkIn = async (
   userId: number,
   shiftId: number,
-  auth: { checkInCode?: string; dynamicQrToken?: string }
+  auth: { checkInCode?: string; dynamicQrToken?: string; clientIp?: string }
 ) => {
   const shiftRepository = AppDataSource.getRepository(WorkShift);
   const attendanceRepository = AppDataSource.getRepository(Attendance);
 
-  const shift = await shiftRepository.findOne({ where: { id: shiftId } });
+  const shift = await shiftRepository.findOne({ where: { id: shiftId }, relations: { branch: true } });
   if (!shift) {
     throw new Error('Ca làm việc không tồn tại.');
   }
@@ -34,6 +34,41 @@ export const checkIn = async (
 
   if (shift.status === 'cancelled') {
     throw new Error('Ca làm việc đã bị hủy.');
+  }
+
+  // --- RÀNG BUỘC THỜI GIAN CHECK-IN ---
+  const dateString = typeof shift.date === 'string' ? shift.date : (shift.date as Date).toISOString().split('T')[0];
+  const scheduledStart = new Date(`${dateString}T${shift.start_time}:00`);
+  const now = new Date();
+
+  // 1. Chặn check-in sớm quá 30 phút
+  const leadTimeMinutes = 30;
+  const tooEarly = now.getTime() < scheduledStart.getTime() - leadTimeMinutes * 60 * 1000;
+  if (tooEarly) {
+    throw new Error('Bạn không thể check-in sớm quá 30 phút so với giờ bắt đầu ca trực.');
+  }
+
+  // 2. Chặn check-in trễ quá 15 phút
+  const gracePeriodMinutes = 15;
+  const tooLate = now.getTime() > scheduledStart.getTime() + gracePeriodMinutes * 60 * 1000;
+  if (tooLate) {
+    throw new Error('Bạn đã trễ quá 15 phút, không thể tự thực hiện check-in cho ca trực này.');
+  }
+
+  // --- RÀNG BUỘC IP TĨNH CỦA CHI NHÁNH ---
+  if (shift.branch?.branch_ip) {
+    const configuredIp = shift.branch.branch_ip.trim();
+    if (configuredIp && auth.clientIp) {
+      const clientIpNormalized = auth.clientIp.replace(/^::ffff:/, '');
+      const configuredIpNormalized = configuredIp.replace(/^::ffff:/, '');
+      
+      const isClientLocal = ['127.0.0.1', '::1'].includes(clientIpNormalized);
+      const isConfigLocal = ['127.0.0.1', '::1'].includes(configuredIpNormalized);
+      
+      if (clientIpNormalized !== configuredIpNormalized && !(isClientLocal && isConfigLocal)) {
+        throw new Error(`Điểm danh thất bại: Thiết bị của bạn cần kết nối vào mạng WiFi của chi nhánh (IP yêu cầu: ${configuredIpNormalized}, IP hiện tại: ${clientIpNormalized}).`);
+      }
+    }
   }
 
   // 1. Xác thực bằng Dynamic QR Token hoặc mã PIN cố định
@@ -79,11 +114,6 @@ export const checkIn = async (
     throw new Error('Bạn đã Check-in cho ca làm việc này rồi.');
   }
 
-  const dateString = typeof shift.date === 'string' ? shift.date : (shift.date as Date).toISOString().split('T')[0];
-  const scheduledStart = new Date(`${dateString}T${shift.start_time}:00`);
-
-  const now = new Date();
-  const gracePeriodMinutes = 15;
   const isLate = now.getTime() > scheduledStart.getTime() + gracePeriodMinutes * 60 * 1000;
 
   if (!attendance) {
@@ -200,14 +230,14 @@ export const checkInFace = async (
   userId: number,
   shiftId: number,
   faceVector: number[],
-  auth: { checkInCode?: string; dynamicQrToken?: string }
+  auth: { checkInCode?: string; dynamicQrToken?: string; clientIp?: string }
 ) => {
   const shiftRepository = AppDataSource.getRepository(WorkShift);
   const attendanceRepository = AppDataSource.getRepository(Attendance);
   const userRepository = AppDataSource.getRepository(User);
 
   // 1. Kiểm tra ca làm việc
-  const shift = await shiftRepository.findOne({ where: { id: shiftId } });
+  const shift = await shiftRepository.findOne({ where: { id: shiftId }, relations: { branch: true } });
   if (!shift) {
     throw new Error('Ca làm việc không tồn tại.');
   }
@@ -218,6 +248,41 @@ export const checkInFace = async (
 
   if (shift.status === 'cancelled') {
     throw new Error('Ca làm việc đã bị hủy.');
+  }
+
+  // --- RÀNG BUỘC THỜI GIAN CHECK-IN ---
+  const dateString = typeof shift.date === 'string' ? shift.date : (shift.date as Date).toISOString().split('T')[0];
+  const scheduledStart = new Date(`${dateString}T${shift.start_time}:00`);
+  const now = new Date();
+
+  // 1. Chặn check-in sớm quá 30 phút
+  const leadTimeMinutes = 30;
+  const tooEarly = now.getTime() < scheduledStart.getTime() - leadTimeMinutes * 60 * 1000;
+  if (tooEarly) {
+    throw new Error('Bạn không thể check-in sớm quá 30 phút so với giờ bắt đầu ca trực.');
+  }
+
+  // 2. Chặn check-in trễ quá 15 phút
+  const gracePeriodMinutes = 15;
+  const tooLate = now.getTime() > scheduledStart.getTime() + gracePeriodMinutes * 60 * 1000;
+  if (tooLate) {
+    throw new Error('Bạn đã trễ quá 15 phút, không thể tự thực hiện check-in cho ca trực này.');
+  }
+
+  // --- RÀNG BUỘC IP TĨNH CỦA CHI NHÁNH ---
+  if (shift.branch?.branch_ip) {
+    const configuredIp = shift.branch.branch_ip.trim();
+    if (configuredIp && auth.clientIp) {
+      const clientIpNormalized = auth.clientIp.replace(/^::ffff:/, '');
+      const configuredIpNormalized = configuredIp.replace(/^::ffff:/, '');
+      
+      const isClientLocal = ['127.0.0.1', '::1'].includes(clientIpNormalized);
+      const isConfigLocal = ['127.0.0.1', '::1'].includes(configuredIpNormalized);
+      
+      if (clientIpNormalized !== configuredIpNormalized && !(isClientLocal && isConfigLocal)) {
+        throw new Error(`Điểm danh thất bại: Thiết bị của bạn cần kết nối vào mạng WiFi của chi nhánh (IP yêu cầu: ${configuredIpNormalized}, IP hiện tại: ${clientIpNormalized}).`);
+      }
+    }
   }
 
   // 2. Xác thực vị trí/sự hiện diện nếu có truyền tham số
@@ -291,11 +356,6 @@ export const checkInFace = async (
     throw new Error('Bạn đã Check-in cho ca làm việc này rồi.');
   }
 
-  const dateString = typeof shift.date === 'string' ? shift.date : (shift.date as Date).toISOString().split('T')[0];
-  const scheduledStart = new Date(`${dateString}T${shift.start_time}:00`);
-
-  const now = new Date();
-  const gracePeriodMinutes = 15;
   const isLate = now.getTime() > scheduledStart.getTime() + gracePeriodMinutes * 60 * 1000;
 
   if (!attendance) {

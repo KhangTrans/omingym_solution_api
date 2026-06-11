@@ -11,6 +11,20 @@ import {
 import { CheckInDto, CheckInFaceDto, CheckOutDto, UpdateAttendanceDto, GetAttendanceQueryDto } from '../dtos/attendance.dto.js';
 import axios from 'axios';
 
+const getClientIp = (req: Request): string => {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (forwarded) {
+    const ips = typeof forwarded === 'string' ? forwarded.split(',') : forwarded;
+    if (Array.isArray(ips) && ips.length > 0) {
+      return ips[0].trim();
+    }
+    if (typeof forwarded === 'string') {
+      return forwarded.trim();
+    }
+  }
+  return req.socket.remoteAddress || req.ip || '';
+};
+
 export const checkInHandler = async (req: Request, res: Response) => {
   try {
     const userId = req.session.user!.id;
@@ -23,9 +37,11 @@ export const checkInHandler = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Vui lòng cung cấp mã PIN hoặc quét mã QR Check-in.' });
     }
 
+    const clientIp = getClientIp(req);
     const attendance = await checkIn(userId, shift_id, {
       checkInCode: check_in_code,
       dynamicQrToken: dynamic_qr_token,
+      clientIp,
     });
     
     res.status(200).json({
@@ -65,9 +81,11 @@ export const checkInFaceHandler = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Vui lòng cung cấp vector khuôn mặt hoặc ảnh dạng base64.' });
     }
 
+    const clientIp = getClientIp(req);
     const attendance = await checkInFace(userId, shift_id, vector, {
       checkInCode: check_in_code,
       dynamicQrToken: dynamic_qr_token,
+      clientIp,
     });
 
     res.status(200).json({

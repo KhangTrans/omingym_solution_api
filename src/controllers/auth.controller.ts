@@ -129,7 +129,11 @@ export const getProfile = async (req: Request, res: Response) => {
       where: { id: userId },
       relations: { 
         role: true, 
-        customer: true,
+        customer: {
+          subscriptions: {
+            membership: true
+          }
+        },
         trainer: { branch: true },
         staff: { branch: true }
       }

@@ -21,6 +21,7 @@ import { CustomerSubscription } from "../models/customer-subscription.entity.js"
 import { Transaction } from "../models/transaction.entity.js";
 import { WorkShift } from "../models/work-shift.entity.js";
 import { Attendance } from "../models/attendance.entity.js";
+import { CustomerCheckIn } from "../models/customer-check-in.entity.js";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -57,6 +58,7 @@ export const AppDataSource = new DataSource({
     Transaction,
     WorkShift,
     Attendance,
+    CustomerCheckIn,
   ],
 
   migrations: [],

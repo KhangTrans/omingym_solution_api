@@ -19,7 +19,8 @@ export const createBranch = async (data: CreateBranchDto) => {
       province: data.province,
       district: data.district,
       opening_house: data.opening_house,
-      image_url: data.image_url
+      image_url: data.image_url,
+      branch_ip: data.branch_ip
     });
     
     const savedBranch = await transactionalEntityManager.save(newBranch);
@@ -190,6 +191,7 @@ export const updateBranch = async (branchId: number, data: Partial<CreateBranchD
     if (data.opening_house) branch.opening_house = data.opening_house;
     if (data.image_url) branch.image_url = data.image_url;
     if (data.manager_id !== undefined) branch.manager_id = data.manager_id;
+    if (data.branch_ip !== undefined) branch.branch_ip = data.branch_ip;
 
     const updatedBranch = await transactionalEntityManager.save(branch);
 
