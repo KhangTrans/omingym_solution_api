@@ -1,5 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn, OneToMany } from 'typeorm';
 import { User } from './user.entity.js';
+import { CustomerSubscription } from './customer-subscription.entity.js';
 
 @Entity('customers')
 export class Customer {
@@ -12,6 +13,9 @@ export class Customer {
   @OneToOne(() => User, (user) => user.customer)
   @JoinColumn({ name: 'user_id' })
   user!: any;
+
+  @OneToMany(() => CustomerSubscription, (subscription) => subscription.customer)
+  subscriptions?: CustomerSubscription[];
 
   @Column({ type: 'date', nullable: true })
   dob?: Date;

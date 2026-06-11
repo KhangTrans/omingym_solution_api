@@ -93,4 +93,8 @@ export class CreateBranchDto {
   @ValidateNested({ each: true })
   @Type(() => BranchFacilityDto)
   facilities?: BranchFacilityDto[];
+
+  @IsOptional()
+  @IsString()
+  branch_ip?: string;
 }

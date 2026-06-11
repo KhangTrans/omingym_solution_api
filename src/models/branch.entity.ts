@@ -25,6 +25,9 @@ export class Branch {
   @Column({ type: 'varchar', length: 20, default: 'active' })
   status!: string;
 
+  @Column({ type: 'varchar', length: 50, name: 'branch_ip', nullable: true })
+  branch_ip?: string;
+
   @Column({ type: 'varchar', length: 100, nullable: true })
   province?: string;
 
