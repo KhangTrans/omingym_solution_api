@@ -28,7 +28,7 @@ export const getAllPosts = async (
   status?: string
 ) => {
   const postRepository = AppDataSource.getRepository(Post);
-  
+
   const skip = (page - 1) * limit;
   const isInternal = userRole === 'Admin' || userRole === 'Staff' || userRole === 'BranchManager';
 
@@ -94,7 +94,7 @@ export const getAllPosts = async (
 export const approvePost = async (postId: number) => {
   const postRepository = AppDataSource.getRepository(Post);
   const post = await postRepository.findOne({ where: { id: postId } });
-  
+
   if (!post) {
     throw new Error('Không tìm thấy bài viết');
   }
@@ -137,7 +137,7 @@ export const submitPostForApproval = async (postId: number, userId: number, role
 
 export const getPostById = async (id: number, userRole?: string) => {
   const postRepository = AppDataSource.getRepository(Post);
-  
+
   const query: any = {
     where: { id },
     relations: { user: { role: true }, images: true }
