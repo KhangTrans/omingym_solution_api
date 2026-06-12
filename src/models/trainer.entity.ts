@@ -14,6 +14,8 @@ import { Branch } from "./branch.entity.js";
 import { TrainerApplication } from "./trainer-application.entity.js";
 import { TrainerCertificate } from "./trainer-certificate.entity.js";
 
+import { TrainerLevel } from "./trainer-status.enum.js";
+
 @Entity("trainers")
 export class Trainer {
   @PrimaryGeneratedColumn()
@@ -44,6 +46,14 @@ export class Trainer {
 
   @Column({ name: "years_experience", type: "int", default: 0 })
   years_experience!: number;
+
+  @Column({
+    type: "enum",
+    enum: TrainerLevel,
+    enumName: "trainer_level",
+    nullable: true,
+  })
+  level?: TrainerLevel;
 
   @Column({ name: "application_id", type: "int", unique: true, nullable: true })
   application_id?: number;

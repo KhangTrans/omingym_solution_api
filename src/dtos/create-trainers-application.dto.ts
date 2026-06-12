@@ -1,4 +1,8 @@
+import { TrainerLevel } from "../models/trainer-status.enum.js";
+
 export class CreateTrainerApplicationDto {
+  branch_id!: number;
+  desired_level!: TrainerLevel;
   bio?: string;
   specialization!: string;
   avatar_url!: string;

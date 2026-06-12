@@ -9,7 +9,9 @@ import { CreateTrainerApplicationDto } from "../dtos/create-trainers-application
 import {
   ApplicationStatus,
   CertificateStatus,
+  TrainerLevel,
 } from "../models/trainer-status.enum.js";
+import { Branch } from "../models/branch.entity.js";
 
 const sendTrainerApprovedWebhook = async (payload: any) => {
   const webhookUrl = process.env.N8N_TRAINER_APPROVED_WEBHOOK_URL;
@@ -50,6 +52,20 @@ export const submitTrainerApplication = async (
     const certificateRepo = manager.getRepository(
       TrainerApplicationCertificate,
     );
+    const branchRepo = manager.getRepository(Branch);
+
+    const branch = await branchRepo.findOne({
+      where: {
+        id: dto.branch_id,
+        status: "active",
+      },
+    });
+
+    if (!branch) {
+      throw new Error(
+        "Chi nhánh ứng tuyển không tồn tại hoặc không hoạt động.",
+      );
+    }
 
     // Lấy đơn mới nhất của user. Pending/approved thì không cho gửi lại.
     // Draft/rejected thì cho cập nhật và gửi lại thành pending.
@@ -72,6 +88,8 @@ export const submitTrainerApplication = async (
       });
     }
 
+    application.branch_id = dto.branch_id;
+    application.desired_level = dto.desired_level;
     application.bio = dto.bio;
     application.specialization = dto.specialization;
     application.avatar_url = dto.avatar_url;
@@ -123,6 +141,7 @@ export const getTrainerApplications = async () => {
   return applicationRepo.find({
     relations: {
       user: true,
+      branch: true,
       certificates: true,
     },
     order: {
@@ -139,6 +158,7 @@ export const getTrainerApplicationById = async (id: number) => {
     where: { id },
     relations: {
       user: true,
+      branch: true,
       certificates: true,
     },
   });
@@ -156,6 +176,7 @@ export const getMyTrainerApplication = async (userId: number) => {
   return applicationRepo.findOne({
     where: { user_id: userId },
     relations: {
+      branch: true,
       certificates: true,
     },
     order: {
@@ -214,6 +235,7 @@ export const rejectTrainerApplication = async (
 export const approveTrainerApplication = async (
   applicationId: number,
   adminId: number,
+  approvedLevel: TrainerLevel,
 ) => {
   return AppDataSource.transaction(async (manager) => {
     const applicationRepo = manager.getRepository(TrainerApplication);
@@ -228,6 +250,7 @@ export const approveTrainerApplication = async (
       where: { id: applicationId },
       relations: {
         user: true,
+        branch: true,
         certificates: true,
       },
     });
@@ -250,8 +273,13 @@ export const approveTrainerApplication = async (
         application_id: application.id,
       });
     }
+    if (!application.branch_id) {
+      throw new Error("Đơn ứng tuyển chưa có chi nhánh.");
+    }
 
     trainer.application_id = application.id;
+    trainer.branch_id = application.branch_id;
+    trainer.level = approvedLevel;
     trainer.bio = application.bio;
     trainer.specialization = application.specialization;
     trainer.avatar_url = application.avatar_url;
@@ -292,6 +320,7 @@ export const approveTrainerApplication = async (
     await applicationCertificateRepo.save(application.certificates);
 
     application.status = ApplicationStatus.Approved;
+    application.approved_level = approvedLevel;
     application.reviewed_at = new Date();
     application.reviewed_by = adminId;
 
@@ -362,6 +391,25 @@ export const saveTrainerApplicationDraft = async (
       });
     }
 
+    if (dto.branch_id !== undefined) {
+      const branchRepo = manager.getRepository(Branch);
+      const branch = await branchRepo.findOne({
+        where: {
+          id: dto.branch_id,
+          status: "active",
+        },
+      });
+
+      if (!branch) {
+        throw new Error(
+          "Chi nhánh ứng tuyển không tồn tại hoặc không hoạt động.",
+        );
+      }
+
+      application.branch_id = dto.branch_id;
+    }
+    if (dto.desired_level !== undefined)
+      application.desired_level = dto.desired_level;
     if (dto.bio !== undefined) application.bio = dto.bio;
     if (dto.specialization !== undefined)
       application.specialization = dto.specialization;
@@ -407,6 +455,7 @@ export const saveTrainerApplicationDraft = async (
     return await applicationRepo.findOne({
       where: { id: savedApplication.id },
       relations: {
+        branch: true,
         certificates: true,
       },
     });
