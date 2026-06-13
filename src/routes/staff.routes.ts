@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createStaffHandler, getStaffListHandler } from '../controllers/staff.controller.js';
+import { createStaffHandler, getStaffListHandler, updateStaffStatusHandler } from '../controllers/staff.controller.js';
 import { isAuthenticated, authorizeRole } from '../middlewares/auth.middleware.js';
 
 const router = Router();
@@ -18,6 +18,14 @@ router.get(
   isAuthenticated,
   authorizeRole(['Admin']),
   getStaffListHandler,
+);
+
+// Admin khóa/mở khóa tài khoản Staff
+router.patch(
+  '/:id/status',
+  isAuthenticated,
+  authorizeRole(['Admin']),
+  updateStaffStatusHandler,
 );
 
 export default router;

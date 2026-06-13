@@ -118,3 +118,34 @@ export const getStaffList = async () => {
   // Loại bỏ password trước khi trả về
   return staffUsers.map(({ password, ...rest }) => rest);
 };
+
+export const updateStaffStatus = async (userId: number, status: string) => {
+  return AppDataSource.transaction(async (manager) => {
+    const userRepo = manager.getRepository(User);
+    const roleRepo = manager.getRepository(Role);
+
+    const staffRole = await roleRepo.findOne({
+      where: { role_name: 'Staff' },
+    });
+    if (!staffRole) {
+      throw new Error('Vai trò Staff không tồn tại trong hệ thống.');
+    }
+
+    const user = await userRepo.findOne({
+      where: { id: userId },
+      relations: { role: true },
+    });
+
+    if (!user) {
+      throw new Error('Không tìm thấy người dùng.');
+    }
+
+    if (user.role_id !== staffRole.id) {
+      throw new Error('Tài khoản này không phải là nhân viên.');
+    }
+
+    user.status = status;
+    const savedUser = await userRepo.save(user);
+    return savedUser;
+  });
+};

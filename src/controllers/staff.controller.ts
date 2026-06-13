@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { createStaffAccount, getStaffList } from '../services/staff.service.js';
+import { createStaffAccount, getStaffList, updateStaffStatus } from '../services/staff.service.js';
 import { StaffDto } from '../dtos/staff.dto.js';
 import { decryptRSA } from '../utils/crypto.js';
 
@@ -81,5 +81,31 @@ export const getStaffListHandler = async (req: Request, res: Response) => {
   } catch (error: unknown) {
     const err = error as Error;
     return res.status(500).json({ message: err.message });
+  }
+};
+
+export const updateStaffStatusHandler = async (req: Request, res: Response) => {
+  try {
+    const staffId = Number(req.params.id);
+    if (!Number.isFinite(staffId)) {
+      return res.status(400).json({ message: 'ID nhân viên không hợp lệ.' });
+    }
+
+    const { status } = req.body as { status?: string };
+    const normalizedStatus = String(status || '').toLowerCase();
+    if (!['active', 'locked'].includes(normalizedStatus)) {
+      return res.status(400).json({ message: 'Trạng thái không hợp lệ. Chỉ chấp nhận active hoặc locked.' });
+    }
+
+    const updatedUser = await updateStaffStatus(staffId, normalizedStatus);
+
+    const { password, ...rest } = updatedUser;
+    return res.json({
+      message: 'Cập nhật trạng thái tài khoản Staff thành công.',
+      data: rest,
+    });
+  } catch (error: unknown) {
+    const err = error as Error;
+    return res.status(400).json({ message: err.message });
   }
 };
