@@ -23,6 +23,7 @@ import { Transaction } from "../models/transaction.entity.js";
 import { WorkShift } from "../models/work-shift.entity.js";
 import { Attendance } from "../models/attendance.entity.js";
 import { CustomerCheckIn } from "../models/customer-check-in.entity.js";
+import { BranchReview } from "../models/branch-review.entity.js";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -61,6 +62,7 @@ export const AppDataSource = new DataSource({
     WorkShift,
     Attendance,
     CustomerCheckIn,
+    BranchReview,
   ],
 
   migrations: [],
