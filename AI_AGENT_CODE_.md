@@ -186,7 +186,7 @@ Quy tắc:
 Controller nên làm các việc:
 
 ```txt
-1. Lấy params/body/session
+1. Lấy params/body/user (do route middleware gắn vào req.user)
 2. Validate cơ bản
 3. Gọi service
 4. Trả response
@@ -198,11 +198,7 @@ Ví dụ:
 ```ts
 export const createFeatureHandler = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.user?.id;
-
-    if (!userId) {
-      return res.status(401).json({ message: "Bạn cần đăng nhập." });
-    }
+    const userId = req.user?.id; // req.user được gắn bởi isAuthenticated trên route
 
     const validationError = validateCreateFeatureBody(req.body);
     if (validationError) {
@@ -1218,11 +1214,7 @@ export default router;
 ```ts
 export const createFeatureHandler = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.user?.id;
-
-    if (!userId) {
-      return res.status(401).json({ message: "Bạn cần đăng nhập." });
-    }
+    const userId = req.user?.id; // req.user được gắn bởi isAuthenticated trên route
 
     const validationError = validateCreateFeatureBody(req.body);
     if (validationError) {

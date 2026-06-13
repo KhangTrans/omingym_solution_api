@@ -15,6 +15,7 @@ import { TrainerApplicationCertificate } from "../models/trainer-application-cer
 import { TrainerCertificate } from "../models/trainer-certificate.entity.js";
 import { MembershipPackage } from "../models/membership-package.entity.js";
 import { MembershipBranch } from "../models/membership-branch.entity.js";
+import { TrainerPackage } from "../models/trainer-package.entity.js";
 import { Post } from "../models/post.entity.js";
 import { PostImage } from "../models/post-image.entity.js";
 import { PostView } from "../models/post-view.entity.js";
@@ -54,6 +55,7 @@ export const AppDataSource = new DataSource({
     FAQ,
     MembershipPackage,
     MembershipBranch,
+    TrainerPackage,
     Post,
     PostImage,
     PostView,
