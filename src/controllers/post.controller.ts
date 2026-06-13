@@ -4,18 +4,22 @@ import { CreatePostDto } from '../dtos/post.dto.js';
 
 export const trackPostView = async (req: Request, res: Response) => {
   try {
-    const postId = parseInt(req.params.id as string);
+    const postId = parseInt(req.params.id as string, 10);
     if (isNaN(postId)) {
-      return res.status(200).json({ success: true, skipped: true });
+      return res.status(400).json({ success: false, error: 'invalid_post_id' });
     }
 
     const user = req.user!;
     const result = await postService.trackView(postId, user.id, user.role);
     return res.status(200).json(result);
   } catch (error: any) {
-    // Silent fail — always return 200 so FE is never disrupted
     console.error('[trackPostView] error:', error?.message);
-    return res.status(200).json({ success: false, error: 'internal' });
+
+    if (error?.message === 'Không tìm thấy bài viết') {
+      return res.status(404).json({ success: false, error: 'post_not_found', message: error.message });
+    }
+
+    return res.status(500).json({ success: false, error: 'internal', message: error.message });
   }
 };
 

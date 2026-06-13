@@ -213,37 +213,48 @@ export const deletePost = async (id: number, userId: number, role: string) => {
   return await postRepository.remove(post);
 };
 
+const syncPostViewCount = async (postId: number) => {
+  const postViewRepository = AppDataSource.getRepository(PostView);
+  const postRepository = AppDataSource.getRepository(Post);
+
+  const viewCount = await postViewRepository.count({ where: { post_id: postId } });
+  await postRepository.update(postId, { view_count: viewCount });
+
+  return viewCount;
+};
+
 /**
  * Track a view for a post by a user.
  * Rules:
  *  - Only roles 'Customer' and 'Trainer' count as views
  *  - Each (user_id, post_id) pair can only count once per calendar day
- *  - Always returns 200 — never throws a user-visible error
  */
 export const trackView = async (postId: number, userId: number, userRole: string) => {
-  // Only count views for Customer and Trainer roles
+  const postRepository = AppDataSource.getRepository(Post);
+  const post = await postRepository.findOne({ where: { id: postId } });
+
+  if (!post) {
+    throw new Error('Không tìm thấy bài viết');
+  }
+
   const countableRoles = ['Customer', 'Trainer'];
   if (!countableRoles.includes(userRole)) {
-    return { success: true, alreadyViewed: false, skipped: true };
+    const viewCount = await syncPostViewCount(postId);
+    return { success: true, alreadyViewed: false, skipped: true, viewCount };
   }
 
   const postViewRepository = AppDataSource.getRepository(PostView);
-  const postRepository = AppDataSource.getRepository(Post);
-
-  // Today's date as YYYY-MM-DD string (UTC-safe via toISOString)
   const todayDate = new Date().toISOString().slice(0, 10);
 
-  // Check if already viewed today
   const existing = await postViewRepository.findOne({
     where: { post_id: postId, user_id: userId, viewed_date: todayDate },
   });
 
   if (existing) {
-    const post = await postRepository.findOne({ where: { id: postId } });
-    return { success: true, alreadyViewed: true, viewCount: post?.view_count ?? 0 };
+    const viewCount = await syncPostViewCount(postId);
+    return { success: true, alreadyViewed: true, viewCount };
   }
 
-  // Insert view record (unique constraint guards against race conditions)
   try {
     const viewRecord = postViewRepository.create({
       post_id: postId,
@@ -252,21 +263,12 @@ export const trackView = async (postId: number, userId: number, userRole: string
     });
     await postViewRepository.save(viewRecord);
 
-    // Atomically increment view_count
-    await postRepository
-      .createQueryBuilder()
-      .update(Post)
-      .set({ view_count: () => 'view_count + 1' })
-      .where('id = :id', { id: postId })
-      .execute();
-
-    const updatedPost = await postRepository.findOne({ where: { id: postId } });
-    return { success: true, alreadyViewed: false, viewCount: updatedPost?.view_count ?? 0 };
+    const viewCount = await syncPostViewCount(postId);
+    return { success: true, alreadyViewed: false, viewCount };
   } catch (err: any) {
-    // Unique constraint violation (race condition) — treat as already viewed
     if (err?.code === '23505') {
-      const post = await postRepository.findOne({ where: { id: postId } });
-      return { success: true, alreadyViewed: true, viewCount: post?.view_count ?? 0 };
+      const viewCount = await syncPostViewCount(postId);
+      return { success: true, alreadyViewed: true, viewCount };
     }
     throw err;
   }
