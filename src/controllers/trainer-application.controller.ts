@@ -9,8 +9,12 @@ import {
   saveTrainerApplicationDraft,
 } from "../services/trainer-application.service.js";
 
+import { TrainerLevel } from "../models/trainer-status.enum.js";
+
 const validateCreateTrainerApplicationBody = (body: any): string | null => {
   const {
+    branch_id,
+    desired_level,
     specialization,
     avatar_url,
     phone_number,
@@ -19,6 +23,14 @@ const validateCreateTrainerApplicationBody = (body: any): string | null => {
     identity_image_url,
     certificates,
   } = body;
+
+  if (!branch_id || Number(branch_id) <= 0) {
+    return "Vui lòng chọn chi nhánh muốn ứng tuyển.";
+  }
+
+  if (!desired_level || !Object.values(TrainerLevel).includes(desired_level)) {
+    return "Vui lòng chọn level muốn ứng tuyển hợp lệ.";
+  }
 
   if (!specialization || !avatar_url || !phone_number || !address) {
     return "Vui lòng nhập đầy đủ thông tin hồ sơ Trainer.";
@@ -133,12 +145,22 @@ export const approveTrainerApplicationHandler = async (
   try {
     const id = Number(req.params.id);
     const adminId = req.user!.id;
+    const { approved_level } = req.body;
+
+    if (
+      !approved_level ||
+      !Object.values(TrainerLevel).includes(approved_level)
+    ) {
+      return res.status(400).json({
+        message: "Vui lòng chọn level duyệt hợp lệ cho Trainer.",
+      });
+    }
 
     if (!id) {
       return res.status(400).json({ message: "Application id không hợp lệ." });
     }
 
-    const result = await approveTrainerApplication(id, adminId);
+    const result = await approveTrainerApplication(id, adminId, approved_level);
 
     return res.json({
       message: "Duyệt đơn Trainer thành công.",

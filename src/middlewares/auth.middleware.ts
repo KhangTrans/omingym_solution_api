@@ -1,15 +1,32 @@
 import { Request, Response, NextFunction } from 'express';
+import { decryptTokenRSA } from '../utils/crypto.js';
 
 /**
- * Middleware để kiểm tra xem người dùng đã đăng nhập (có session) chưa.
+ * Middleware để kiểm tra xem người dùng đã đăng nhập bằng Bearer RSA token.
+ * Không dùng session nữa.
  */
 export const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
+  if (!req.user) {
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.slice(7).trim();
+      try {
+        const decryptedUser = decryptTokenRSA(token);
+        req.user = decryptedUser;
+      } catch (error: any) {
+        return res.status(401).json({
+          message: 'Token không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.'
+        });
+      }
+    }
+  }
+
   if (req.user) {
     return next();
   }
-  
-  return res.status(401).json({ 
-    message: 'Bạn cần đăng nhập để thực hiện chức năng này.' 
+
+  return res.status(401).json({
+    message: 'Bạn cần đăng nhập để thực hiện chức năng này.'
   });
 };
 
@@ -23,8 +40,8 @@ export const authorizeRole = (allowedRoles: string[]) => {
     const userRole = req.user?.role;
 
     if (!userRole || !allowedRoles.includes(userRole)) {
-      return res.status(403).json({ 
-        message: 'Bạn không có quyền truy cập vào chức năng này.' 
+      return res.status(403).json({
+        message: 'Bạn không có quyền truy cập vào chức năng này.'
       });
     }
 
