@@ -59,12 +59,8 @@ export const checkIn = async (
     throw new Error('Bạn không thể check-in sớm quá 30 phút so với giờ bắt đầu ca trực.');
   }
 
-  // 2. Chặn check-in trễ quá 15 phút
+  // Thời gian ân hạn đi muộn (phút)
   const gracePeriodMinutes = 15;
-  const tooLate = now.getTime() > scheduledStart.getTime() + gracePeriodMinutes * 60 * 1000;
-  if (tooLate) {
-    throw new Error('Bạn đã trễ quá 15 phút, không thể tự thực hiện check-in cho ca trực này.');
-  }
 
   // --- RÀNG BUỘC IP TĨNH CỦA CHI NHÁNH ---
   if (shift.branch?.branch_ip) {
@@ -176,6 +172,7 @@ export const fetchAttendanceLogs = async (query: GetAttendanceQueryDto) => {
     .leftJoinAndSelect('attendance.user', 'user')
     .leftJoinAndSelect('attendance.shift', 'shift')
     .leftJoinAndSelect('shift.branch', 'branch')
+    .leftJoinAndSelect('shift.shift', 'template')
     .orderBy('attendance.check_in_time', 'DESC');
 
   if (query.user_id) {
@@ -203,7 +200,8 @@ export const fetchMyAttendanceLogs = async (userId: number) => {
     where: { user_id: userId },
     relations: {
       shift: {
-        branch: true
+        branch: true,
+        shift: true
       }
     },
     order: { check_in_time: 'DESC' },
@@ -283,12 +281,8 @@ export const checkInFace = async (
     throw new Error('Bạn không thể check-in sớm quá 30 phút so với giờ bắt đầu ca trực.');
   }
 
-  // 2. Chặn check-in trễ quá 15 phút
+  // Thời gian ân hạn đi muộn (phút)
   const gracePeriodMinutes = 15;
-  const tooLate = now.getTime() > scheduledStart.getTime() + gracePeriodMinutes * 60 * 1000;
-  if (tooLate) {
-    throw new Error('Bạn đã trễ quá 15 phút, không thể tự thực hiện check-in cho ca trực này.');
-  }
 
   // --- RÀNG BUỘC IP TĨNH CỦA CHI NHÁNH ---
   if (shift.branch?.branch_ip) {
