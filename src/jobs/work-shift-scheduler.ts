@@ -3,29 +3,29 @@ import { generateNextWeekWorkShifts } from '../services/work-shift-generator.ser
 /**
  * Scheduler nhẹ chạy ngay trong process Node hiện tại.
  * Mỗi lần kích hoạt sẽ:
- *  - Tính thời điểm 23:59 thứ 6 sắp tới.
+ *  - Tính thời điểm 00:00 thứ 7 sắp tới.
  *  - setTimeout cho tới đúng thời điểm đó.
  *  - Chạy generateNextWeekWorkShifts() rồi tự lập lịch lại.
  */
 
-const FRIDAY_ISO = 5; // ISO 1..7 (1 = Mon, 5 = Fri, 7 = Sun)
-const TARGET_HOUR = 23;
-const TARGET_MINUTE = 59;
+const SATURDAY_ISO = 6; // ISO 1..7 (1 = Mon, 6 = Sat, 7 = Sun)
+const TARGET_HOUR = 0;
+const TARGET_MINUTE = 0;
 
 const isoDayOfWeek = (date: Date): number => {
   const jsDay = date.getDay();
   return jsDay === 0 ? 7 : jsDay;
 };
 
-export const getNextFridayRunTime = (now: Date = new Date()): Date => {
+export const getNextRunTime = (now: Date = new Date()): Date => {
   const next = new Date(now);
   next.setSeconds(0, 0);
 
   const todayIso = isoDayOfWeek(next);
-  let offsetDays = (FRIDAY_ISO - todayIso + 7) % 7;
+  let offsetDays = (SATURDAY_ISO - todayIso + 7) % 7;
 
   if (offsetDays === 0) {
-    // Đang là thứ 6: nếu chưa qua 23:59 thì chạy hôm nay, ngược lại lùi 7 ngày sau.
+    // Đang là thứ 7: nếu chưa qua 00:00 thì chạy hôm nay, ngược lại lùi 7 ngày sau.
     const todayTarget = new Date(next);
     todayTarget.setHours(TARGET_HOUR, TARGET_MINUTE, 0, 0);
     if (todayTarget.getTime() <= now.getTime()) {
@@ -42,7 +42,7 @@ let timer: NodeJS.Timeout | null = null;
 
 const scheduleNextRun = () => {
   const now = new Date();
-  const target = getNextFridayRunTime(now);
+  const target = getNextRunTime(now);
   const delay = Math.max(target.getTime() - now.getTime(), 1000);
 
   // setTimeout giới hạn 32-bit -> chia thành chặng <= 24 ngày để an toàn.

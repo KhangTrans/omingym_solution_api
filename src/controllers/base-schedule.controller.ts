@@ -21,7 +21,11 @@ const validateSetupBody = (body: any): string | null => {
   }
 
   if (!Array.isArray(items) || items.length === 0) {
-    return 'Vui lòng cung cấp danh sách 7 ngày trong tuần.';
+    return 'Vui lòng chọn ít nhất 1 ngày đi làm trong tuần.';
+  }
+
+  if (items.length > 7) {
+    return 'Khung lịch tuần tối đa chỉ có 7 ngày.';
   }
 
   for (const item of items) {

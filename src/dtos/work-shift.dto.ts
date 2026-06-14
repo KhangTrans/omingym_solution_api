@@ -19,3 +19,13 @@ export interface GetWorkShiftsQueryDto {
   branch_id?: number;
   status?: string;
 }
+
+/**
+ * Step 2: Kích hoạt lịch làm việc tuần đầu cho nhân viên mới.
+ * `start_date` là ngày Dương lịch đầu tiên nhân viên đi làm (YYYY-MM-DD).
+ * Backend sẽ sinh work_shifts từ start_date đến hết Chủ Nhật của tuần đó.
+ */
+export interface ActivateFirstWeekDto {
+  user_id: number;
+  start_date: string;
+}

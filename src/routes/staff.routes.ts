@@ -16,9 +16,10 @@ router.post(
 router.get(
   '/',
   isAuthenticated,
-  authorizeRole(['Admin']),
+  authorizeRole(['Admin', 'BranchManager']),
   getStaffListHandler,
 );
+
 
 // Admin khóa/mở khóa tài khoản Staff
 router.patch(
