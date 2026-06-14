@@ -28,6 +28,7 @@ import { BranchReview } from "../models/branch-review.entity.js";
 import { Shift } from "../models/shift.entity.js";
 import { BaseSchedule } from "../models/base-schedule.entity.js";
 import { TimeOffRequest } from "../models/time-off-request.entity.js";
+import { FavoriteTrainer } from "../models/favorite-trainer.entity.js";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -71,6 +72,7 @@ export const AppDataSource = new DataSource({
     Shift,
     BaseSchedule,
     TimeOffRequest,
+    FavoriteTrainer,
   ],
 
   migrations: [],
