@@ -22,6 +22,7 @@ import staffRoutes from './routes/staff.routes.js';
 import shiftRoutes from './routes/shift.routes.js';
 import baseScheduleRoutes from './routes/base-schedule.routes.js';
 import timeOffRequestRoutes from './routes/time-off-request.routes.js';
+import favoriteTrainerRoutes from './routes/favorite-trainer.routes.js';
 import { startWorkShiftScheduler } from './jobs/work-shift-scheduler.js';
 
 dotenv.config();
@@ -100,6 +101,7 @@ app.use('/api/trainers', trainerRoutes);
 app.use('/api/shifts', shiftRoutes);
 app.use('/api/base-schedules', baseScheduleRoutes);
 app.use('/api/time-off-requests', timeOffRequestRoutes);
+app.use('/api/favorites', favoriteTrainerRoutes);
 
 
 // Basic Route
