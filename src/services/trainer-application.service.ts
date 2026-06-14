@@ -195,6 +195,9 @@ export const rejectTrainerApplication = async (
 
   const application = await applicationRepo.findOne({
     where: { id: applicationId },
+    relations: {
+      branch: true,
+    },
   });
 
   if (!application) {
@@ -219,6 +222,8 @@ export const rejectTrainerApplication = async (
     applicationId: savedApplication.id,
     phone: savedApplication.phone_number,
     rejectReason: savedApplication.rejection_reason,
+    branchId: savedApplication.branch_id,
+    branchName: savedApplication.branch?.branch_name,
     message: "Xin chào, hồ sơ huấn luyện viên của bạn đã bị từ chối.",
   };
 
@@ -340,6 +345,8 @@ export const approveTrainerApplication = async (
       userId: application.user_id,
       applicationId: application.id,
       phone: application.phone_number,
+      branchId: application.branch_id,
+      branchName: application.branch?.branch_name,
       // rejectReason: application.rejection_reason,
       message: "Xin chào, hồ sơ huấn luyện viên của bạn đã được duyệt.",
     };
@@ -353,7 +360,9 @@ export const approveTrainerApplication = async (
     return {
       trainer: savedTrainer,
       certificates: trainerCertificates,
-      webhook_sent: Boolean(process.env.N8N_TRAINER_APPROVED_WEBHOOK_URL),
+      webhook_sent: Boolean(
+        process.env.N8N_TRAINER_APPROVED_REJECT_WEBHOOK_URL,
+      ),
     };
   });
 };
