@@ -23,7 +23,7 @@ export const checkIn = async (
   const shiftRepository = AppDataSource.getRepository(WorkShift);
   const attendanceRepository = AppDataSource.getRepository(Attendance);
 
-  const shift = await shiftRepository.findOne({ where: { id: shiftId }, relations: { branch: true } });
+  const shift = await shiftRepository.findOne({ where: { id: shiftId }, relations: { branch: true, shift: true } });
   if (!shift) {
     throw new Error('Ca làm việc không tồn tại.');
   }
@@ -36,9 +36,20 @@ export const checkIn = async (
     throw new Error('Ca làm việc đã bị hủy.');
   }
 
+  if (shift.status === 'off_approved') {
+    throw new Error('Ngày này bạn đã được duyệt nghỉ, không thể check-in.');
+  }
+
+  const templateStartTime = shift.shift?.start_time;
+  if (!templateStartTime) {
+    throw new Error('Ca làm việc chưa được gán giờ làm. Vui lòng liên hệ Quản lý.');
+  }
+
   // --- RÀNG BUỘC THỜI GIAN CHECK-IN ---
   const dateString = typeof shift.date === 'string' ? shift.date : (shift.date as Date).toISOString().split('T')[0];
-  const scheduledStart = new Date(`${dateString}T${shift.start_time}:00`);
+  // Postgres time có thể là 'HH:mm' hoặc 'HH:mm:ss'.
+  const startTimeForIso = templateStartTime.length >= 8 ? templateStartTime : `${templateStartTime}:00`;
+  const scheduledStart = new Date(`${dateString}T${startTimeForIso}`);
   const now = new Date();
 
   // 1. Chặn check-in sớm quá 30 phút
@@ -237,7 +248,7 @@ export const checkInFace = async (
   const userRepository = AppDataSource.getRepository(User);
 
   // 1. Kiểm tra ca làm việc
-  const shift = await shiftRepository.findOne({ where: { id: shiftId }, relations: { branch: true } });
+  const shift = await shiftRepository.findOne({ where: { id: shiftId }, relations: { branch: true, shift: true } });
   if (!shift) {
     throw new Error('Ca làm việc không tồn tại.');
   }
@@ -250,9 +261,19 @@ export const checkInFace = async (
     throw new Error('Ca làm việc đã bị hủy.');
   }
 
+  if (shift.status === 'off_approved') {
+    throw new Error('Ngày này bạn đã được duyệt nghỉ, không thể check-in.');
+  }
+
+  const faceTemplateStartTime = shift.shift?.start_time;
+  if (!faceTemplateStartTime) {
+    throw new Error('Ca làm việc chưa được gán giờ làm. Vui lòng liên hệ Quản lý.');
+  }
+
   // --- RÀNG BUỘC THỜI GIAN CHECK-IN ---
   const dateString = typeof shift.date === 'string' ? shift.date : (shift.date as Date).toISOString().split('T')[0];
-  const scheduledStart = new Date(`${dateString}T${shift.start_time}:00`);
+  const faceStartTimeForIso = faceTemplateStartTime.length >= 8 ? faceTemplateStartTime : `${faceTemplateStartTime}:00`;
+  const scheduledStart = new Date(`${dateString}T${faceStartTimeForIso}`);
   const now = new Date();
 
   // 1. Chặn check-in sớm quá 30 phút
