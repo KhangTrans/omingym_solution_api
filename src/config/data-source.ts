@@ -25,6 +25,9 @@ import { WorkShift } from "../models/work-shift.entity.js";
 import { Attendance } from "../models/attendance.entity.js";
 import { CustomerCheckIn } from "../models/customer-check-in.entity.js";
 import { BranchReview } from "../models/branch-review.entity.js";
+import { Shift } from "../models/shift.entity.js";
+import { BaseSchedule } from "../models/base-schedule.entity.js";
+import { TimeOffRequest } from "../models/time-off-request.entity.js";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -65,9 +68,13 @@ export const AppDataSource = new DataSource({
     Attendance,
     CustomerCheckIn,
     BranchReview,
+    Shift,
+    BaseSchedule,
+    TimeOffRequest,
   ],
 
   migrations: [],
   subscribers: [],
 });
+
 

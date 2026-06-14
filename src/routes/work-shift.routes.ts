@@ -6,6 +6,7 @@ import {
   updateShiftHandler,
   deleteShiftHandler,
   getMyShiftsHandler,
+  triggerGenerateNextWeekHandler,
 } from '../controllers/work-shift.controller.js';
 import { isAuthenticated, authorizeRole } from '../middlewares/auth.middleware.js';
 
@@ -13,6 +14,14 @@ const router = Router();
 
 // Xem lịch làm việc cá nhân
 router.get('/me', isAuthenticated, getMyShiftsHandler);
+
+// Trigger thủ công job sinh lịch tuần kế tiếp (Step 3).
+router.post(
+  '/generate-next-week',
+  isAuthenticated,
+  authorizeRole(['Admin', 'BranchManager']),
+  triggerGenerateNextWeekHandler,
+);
 
 // Staff, Trainer, BranchManager, Admin đều được xem danh sách ca làm việc (phân quyền dữ liệu trong controller)
 router.get('/', isAuthenticated, getShiftsHandler);

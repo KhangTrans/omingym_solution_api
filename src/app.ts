@@ -19,7 +19,10 @@ import workShiftRoutes from './routes/work-shift.routes.js';
 import attendanceRoutes from './routes/attendance.routes.js';
 import customerCheckInRoutes from './routes/customer-check-in.routes.js';
 import staffRoutes from './routes/staff.routes.js';
-import trainerRoutes from './routes/trainer.routes.js';
+import shiftRoutes from './routes/shift.routes.js';
+import baseScheduleRoutes from './routes/base-schedule.routes.js';
+import timeOffRequestRoutes from './routes/time-off-request.routes.js';
+import { startWorkShiftScheduler } from './jobs/work-shift-scheduler.js';
 
 dotenv.config();
 
@@ -69,6 +72,9 @@ AppDataSource.initialize()
       ]);
       console.log("Default roles seeded.");
     }
+
+    // Step 3: bật scheduler chạy 23:59 thứ 6 hàng tuần để sinh lịch tuần kế tiếp.
+    startWorkShiftScheduler();
   })
   .catch((err) => {
     console.error("Error during Data Source initialization", err);
@@ -89,7 +95,11 @@ app.use('/api/work-shifts', workShiftRoutes);
 app.use('/api/attendances', attendanceRoutes);
 app.use('/api/customer-check-ins', customerCheckInRoutes);
 app.use('/api/staffs', staffRoutes);
+
 app.use('/api/trainers', trainerRoutes);
+app.use('/api/shifts', shiftRoutes);
+app.use('/api/base-schedules', baseScheduleRoutes);
+app.use('/api/time-off-requests', timeOffRequestRoutes);
 
 
 // Basic Route

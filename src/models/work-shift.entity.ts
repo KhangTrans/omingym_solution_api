@@ -1,8 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn, Unique } from 'typeorm';
 import { User } from './user.entity.js';
 import { Branch } from './branch.entity.js';
+import { Shift } from './shift.entity.js';
+import { WorkShiftStatus } from './work-shift-status.enum.js';
 
 @Entity('work_shifts')
+@Unique('uq_work_shift_user_date', ['user_id', 'date'])
 export class WorkShift {
   @PrimaryGeneratedColumn()
   id!: number;
@@ -24,14 +27,15 @@ export class WorkShift {
   @Column({ type: 'date' })
   date!: Date;
 
-  @Column({ type: 'varchar', length: 10, name: 'start_time' })
-  start_time!: string; // HH:mm format, e.g. "08:00"
+  @Column({ name: 'shift_id', type: 'int', nullable: true })
+  shift_id?: number | null;
 
-  @Column({ type: 'varchar', length: 10, name: 'end_time' })
-  end_time!: string; // HH:mm format, e.g. "17:00"
+  @ManyToOne(() => Shift, { nullable: true })
+  @JoinColumn({ name: 'shift_id' })
+  shift?: Shift | null;
 
-  @Column({ type: 'varchar', length: 20, default: 'scheduled' })
-  status!: string; // 'scheduled', 'completed', 'cancelled'
+  @Column({ type: 'varchar', length: 20, default: WorkShiftStatus.Scheduled })
+  status!: WorkShiftStatus;
 
   @Column({ type: 'varchar', length: 10, name: 'check_in_code', nullable: true })
   check_in_code?: string; // 6-digit uppercase code

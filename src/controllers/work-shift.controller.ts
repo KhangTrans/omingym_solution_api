@@ -1,36 +1,47 @@
 import { Request, Response } from 'express';
-import { createShift, fetchShifts, fetchShiftById, updateShift, deleteShift } from '../services/work-shift.service.js';
-import { CreateWorkShiftDto, GetWorkShiftsQueryDto, UpdateWorkShiftDto } from '../dtos/work-shift.dto.js';
+import {
+  createShift,
+  fetchShifts,
+  fetchShiftById,
+  updateShift,
+  deleteShift,
+} from '../services/work-shift.service.js';
+import { generateNextWeekWorkShifts } from '../services/work-shift-generator.service.js';
+import {
+  CreateWorkShiftDto,
+  GetWorkShiftsQueryDto,
+  UpdateWorkShiftDto,
+} from '../dtos/work-shift.dto.js';
+import { WorkShiftStatus } from '../models/work-shift-status.enum.js';
 
 export const createShiftHandler = async (req: Request, res: Response) => {
   try {
-    const { user_id, branch_id, date, start_time, end_time, check_in_code }: CreateWorkShiftDto = req.body;
+    const { user_id, branch_id, date, shift_id, check_in_code }: CreateWorkShiftDto = req.body;
 
-    if (!user_id || !branch_id || !date || !start_time || !end_time) {
+    if (!user_id || !branch_id || !date) {
       return res.status(400).json({
-        message: 'Vui lòng cung cấp đầy đủ thông tin: user_id, branch_id, date, start_time, end_time.',
+        message: 'Vui lòng cung cấp đầy đủ thông tin: user_id, branch_id, date.',
       });
     }
 
-    const timeRegex = /^([0-9]|0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$/;
-    if (!timeRegex.test(start_time) || !timeRegex.test(end_time)) {
-      return res.status(400).json({
-        message: 'Định dạng start_time hoặc end_time không hợp lệ. Vui lòng nhập HH:mm.',
-      });
+    if (shift_id !== undefined && shift_id !== null && Number(shift_id) <= 0) {
+      return res.status(400).json({ message: 'shift_id không hợp lệ.' });
     }
 
     const shift = await createShift({
       user_id,
       branch_id,
       date,
-      start_time,
-      end_time,
+      shift_id: shift_id ?? null,
       check_in_code,
     });
 
-    res.status(201).json(shift);
+    res.status(201).json({
+      message: 'Tạo ca làm việc thành công.',
+      data: shift,
+    });
   } catch (error: any) {
-    res.status(500).json({ message: error.message });
+    res.status(400).json({ message: error.message });
   }
 };
 
@@ -55,9 +66,12 @@ export const getShiftsHandler = async (req: Request, res: Response) => {
     if (req.query.date) {
       query.date = String(req.query.date);
     }
+    if (req.query.status) {
+      query.status = String(req.query.status);
+    }
 
     const shifts = await fetchShifts(query);
-    res.json(shifts);
+    res.json({ data: shifts });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
@@ -81,7 +95,7 @@ export const getShiftByIdHandler = async (req: Request, res: Response) => {
       return res.status(403).json({ message: 'Bạn không có quyền xem thông tin ca làm việc này.' });
     }
 
-    res.json(shift);
+    res.json({ data: shift });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
@@ -96,12 +110,11 @@ export const updateShiftHandler = async (req: Request, res: Response) => {
 
     const payload: UpdateWorkShiftDto = req.body;
 
-    const timeRegex = /^([0-9]|0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$/;
-    if (payload.start_time && !timeRegex.test(payload.start_time)) {
-      return res.status(400).json({ message: 'Định dạng start_time không hợp lệ. Vui lòng nhập HH:mm.' });
-    }
-    if (payload.end_time && !timeRegex.test(payload.end_time)) {
-      return res.status(400).json({ message: 'Định dạng end_time không hợp lệ. Vui lòng nhập HH:mm.' });
+    if (payload.status) {
+      const valid = Object.values(WorkShiftStatus).includes(payload.status as WorkShiftStatus);
+      if (!valid) {
+        return res.status(400).json({ message: 'Trạng thái ca làm việc không hợp lệ.' });
+      }
     }
 
     const updated = await updateShift(shiftId, payload);
@@ -109,9 +122,9 @@ export const updateShiftHandler = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Không tìm thấy ca làm việc.' });
     }
 
-    res.json(updated);
+    res.json({ message: 'Cập nhật ca làm việc thành công.', data: updated });
   } catch (error: any) {
-    res.status(500).json({ message: error.message });
+    res.status(400).json({ message: error.message });
   }
 };
 
@@ -154,5 +167,21 @@ export const getMyShiftsHandler = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+/**
+ * Cho phép Admin / BranchManager chạy thủ công job sinh lịch tuần kế tiếp.
+ * Hữu ích khi cần test hoặc tạo lại lịch sau khi điều chỉnh khung.
+ */
+export const triggerGenerateNextWeekHandler = async (req: Request, res: Response) => {
+  try {
+    const result = await generateNextWeekWorkShifts(new Date());
+    return res.json({
+      message: 'Sinh lịch tuần kế tiếp thành công.',
+      data: result,
+    });
+  } catch (error: any) {
+    return res.status(400).json({ message: error.message });
   }
 };
