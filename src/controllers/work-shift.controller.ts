@@ -6,8 +6,12 @@ import {
   updateShift,
   deleteShift,
 } from '../services/work-shift.service.js';
-import { generateNextWeekWorkShifts } from '../services/work-shift-generator.service.js';
 import {
+  activateFirstWeekWorkShifts,
+  generateNextWeekWorkShifts,
+} from '../services/work-shift-generator.service.js';
+import {
+  ActivateFirstWeekDto,
   CreateWorkShiftDto,
   GetWorkShiftsQueryDto,
   UpdateWorkShiftDto,
@@ -179,6 +183,57 @@ export const triggerGenerateNextWeekHandler = async (req: Request, res: Response
     const result = await generateNextWeekWorkShifts(new Date());
     return res.json({
       message: 'Sinh lịch tuần kế tiếp thành công.',
+      data: result,
+    });
+  } catch (error: any) {
+    return res.status(400).json({ message: error.message });
+  }
+};
+
+/**
+ * Step 2: Kích hoạt lịch tuần đầu cho nhân viên mới.
+ * Body: { user_id: number, start_date: 'YYYY-MM-DD' }
+ * - Sinh work_shifts từ start_date đến hết Chủ Nhật cùng tuần dựa trên base_schedules.
+ */
+const validateActivateFirstWeekBody = (body: any): string | null => {
+  if (!body || typeof body !== 'object') {
+    return 'Dữ liệu không hợp lệ.';
+  }
+
+  const { user_id, start_date } = body;
+
+  if (!user_id || Number(user_id) <= 0) {
+    return 'Vui lòng chọn nhân viên cần kích hoạt lịch.';
+  }
+
+  if (!start_date || typeof start_date !== 'string') {
+    return 'Vui lòng chọn ngày bắt đầu đi làm.';
+  }
+
+  const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!isoDateRegex.test(start_date)) {
+    return 'Định dạng ngày bắt đầu không hợp lệ. Vui lòng nhập YYYY-MM-DD.';
+  }
+
+  return null;
+};
+
+export const activateFirstWeekHandler = async (req: Request, res: Response) => {
+  try {
+    const validationError = validateActivateFirstWeekBody(req.body);
+    if (validationError) {
+      return res.status(400).json({ message: validationError });
+    }
+
+    const dto: ActivateFirstWeekDto = {
+      user_id: Number(req.body.user_id),
+      start_date: String(req.body.start_date),
+    };
+
+    const result = await activateFirstWeekWorkShifts(dto.user_id, dto.start_date);
+
+    return res.status(201).json({
+      message: 'Kích hoạt lịch tuần đầu thành công.',
       data: result,
     });
   } catch (error: any) {

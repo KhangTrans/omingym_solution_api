@@ -7,6 +7,7 @@ import {
   deleteShiftHandler,
   getMyShiftsHandler,
   triggerGenerateNextWeekHandler,
+  activateFirstWeekHandler,
 } from '../controllers/work-shift.controller.js';
 import { isAuthenticated, authorizeRole } from '../middlewares/auth.middleware.js';
 
@@ -14,6 +15,14 @@ const router = Router();
 
 // Xem lịch làm việc cá nhân
 router.get('/me', isAuthenticated, getMyShiftsHandler);
+
+// Step 2: Kích hoạt lịch tuần đầu cho nhân viên mới (chạy ngay sau khi setup khung lịch).
+router.post(
+  '/activate-first-week',
+  isAuthenticated,
+  authorizeRole(['Admin', 'BranchManager']),
+  activateFirstWeekHandler,
+);
 
 // Trigger thủ công job sinh lịch tuần kế tiếp (Step 3).
 router.post(
